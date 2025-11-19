@@ -8,7 +8,7 @@
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #0d0d1a; /* 深藍紫背景 */
+            background-color: #0d0d1a;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #e0e0ff;
             touch-action: none;
@@ -17,20 +17,17 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            perspective: 1000px; /* 創造 3D 景深 */
         }
         #game-container {
             position: relative;
-            width: 90vmin; /* 視窗較小的一邊的 90% */
+            width: 90vmin;
             height: 90vmin;
-            background: linear-gradient(135deg, #1a1a3a 0%, #3a1a3a 100%); /* 華麗漸層 */
+            background: linear-gradient(135deg, #1a1a3a 0%, #2b102b 100%);
             border: 8px solid;
-            border-image: linear-gradient(45deg, #8a2be2, #00ffff, #ff1493) 1; /* 漸層邊框 */
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.5), 0 0 100px rgba(138, 43, 226, 0.4); /* 發光邊框 */
-            border-radius: 20px;
-            overflow: hidden; /* 隱藏超出邊界的內容 */
-            transform: rotateX(15deg) rotateZ(5deg); /* 輕微傾斜，增加 3D 感 */
-            transform-style: preserve-3d;
+            border-image: linear-gradient(45deg, #00ffff, #ff00ff) 1;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.3), 0 0 80px rgba(255, 0, 255, 0.2);
+            border-radius: 4px; /* Three.js 畫布通常是矩形，用這個微調 */
+            overflow: hidden;
         }
         #three-canvas {
             display: block;
@@ -39,315 +36,275 @@
             position: absolute;
             top: 0;
             left: 0;
+            z-index: 1;
         }
         #ui-layer {
             position: absolute;
-            top: 20px;
+            top: 10%;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
             pointer-events: none;
-            z-index: 100; /* 確保在最上層 */
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
+            z-index: 100;
+            width: 100%;
         }
-        #start-btn {
-            padding: 15px 30px;
-            font-size: 18px;
-            background: linear-gradient(45deg, #00bcd4, #007bff);
-            color: white;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            pointer-events: auto;
-            display: none;
-            box-shadow: 0 5px 15px rgba(0, 188, 212, 0.4);
-            transition: transform 0.2s ease-in-out;
-        }
-        #start-btn:hover {
-            transform: scale(1.05);
+        h2 {
+            margin: 0;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(0,255,255,0.8);
         }
         .info {
             font-size: 14px;
-            color: #c0c0e0;
-            margin-top: 10px;
+            color: #aaa;
+            margin-top: 5px;
         }
-        #status {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #00ffff;
-            text-shadow: 0 0 15px #00ffff;
+        #start-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 18px;
+            background: rgba(0, 188, 212, 0.8);
+            color: white;
+            border: 2px solid #00ffff;
+            border-radius: 25px;
+            cursor: pointer;
+            pointer-events: auto;
+            display: none; /* 預設隱藏，JS 檢查後顯示 */
+            backdrop-filter: blur(5px);
         }
         #debug-info {
+            margin-top: 10px;
             font-family: monospace;
-            font-size: 12px;
-            color: #90ee90;
+            color: #00ff00;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui-layer">
-        <h2 id="status">傾斜手機，讓球舞動！</h2>
-        <p class="info">PC: 方向鍵控制 | Mobile: 傾斜手機</p>
-        <button id="start-btn">點擊開始 (授權陀螺儀)</button>
-        <div id="debug-info" class="info">等待感測器數據...</div>
-    </div>
-
     <div id="game-container">
         <canvas id="three-canvas"></canvas>
+        <div id="ui-layer">
+            <h2 id="status">載入完成！請點擊開始</h2>
+            <p class="info">電腦：方向鍵 | 手機：傾斜</p>
+            <div id="debug-info">等待操作...</div>
+            <button id="start-btn">啟動陀螺儀</button>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.164.1/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.164.1/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
+    <script>
+        // --- 等待所有資源載入後再執行 ---
+        window.onload = function() {
+            if (typeof THREE === 'undefined' || typeof Matter === 'undefined') {
+                document.getElementById('status').innerText = "錯誤：程式庫載入失敗，請重新整理";
+                return;
+            }
+            initGame();
+        };
 
-<script>
-    // --- THREE.js 3D 場景設定 ---
-    const container = document.getElementById('game-container');
-    const threeCanvas = document.getElementById('three-canvas');
-    let scene, camera, renderer;
-    const threeBalls = []; // 存放 three.js 的 3D 球體 Mesh
-    const wallMeshes = []; // 存放 three.js 的 3D 牆面 Mesh
+        function initGame() {
+            // --- 變數宣告 ---
+            const container = document.getElementById('game-container');
+            const threeCanvas = document.getElementById('three-canvas');
+            const debugInfo = document.getElementById('debug-info');
+            const startBtn = document.getElementById('start-btn');
+            const statusText = document.getElementById('status');
+            
+            let scene, camera, renderer;
+            const threeBalls = []; 
+            let engine, world;
+            const matterBalls = [];
 
-    function initThreeScene() {
-        // 渲染器
-        renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true, alpha: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+            // 陀螺儀數據
+            let tiltX = 0;
+            let tiltY = 0;
+            const keys = {};
 
-        // 場景
-        scene = new THREE.Scene();
-        // scene.background = new THREE.Color(0x0d0d1a); // 可以有 Three.js 自己的背景
+            // --- 1. 初始化 THREE.js 場景 ---
+            function initThree() {
+                scene = new THREE.Scene();
+                
+                // 相機設定
+                camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+                camera.position.set(0, 0, 600); // 拉高相機距離
+                camera.lookAt(0, 0, 0);
 
-        // 相機 (透視相機)
-        camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(0, 0, 100); // 調整相機位置，俯視場景
-        camera.lookAt(0, 0, 0);
+                // 渲染器設定
+                renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
 
-        // 光源
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // 環境光
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5); // 平行光
-        directionalLight.position.set(50, 50, 50);
-        scene.add(directionalLight);
+                // 燈光
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                
+                const spotLight = new THREE.SpotLight(0xffffff, 1);
+                spotLight.position.set(100, 100, 500);
+                spotLight.angle = Math.PI / 4;
+                spotLight.penumbra = 0.1;
+                scene.add(spotLight);
 
-        // 創建 3D 牆面 (用 PlaneGeometry 簡單表示，可替換為 BoxGeometry 增加厚度)
-        const wallMaterial = new THREE.MeshPhongMaterial({
-            color: 0x8a2be2, // 紫羅蘭色
-            transparent: true,
-            opacity: 0.7,
-            side: THREE.DoubleSide
-        });
+                // 建立透明地板平面 (只為了接收陰影或視覺參考，可選)
+                // 這裡我們主要依賴 CSS 背景，Three.js 只負責球
+            }
 
-        // 定義 Matter.js 物理世界的邊界尺寸
-        const borderThickness = 10;
-        const width = Engine.bounds.max.x - Engine.bounds.min.x;
-        const height = Engine.bounds.max.y - Engine.bounds.min.y;
+            // --- 2. 初始化 Matter.js 物理 ---
+            function initPhysics() {
+                const Engine = Matter.Engine,
+                      Bodies = Matter.Bodies,
+                      World = Matter.World;
 
-        // Matter.js 邊界和 Three.js 牆面會同步，所以我們用 Matter.js 的大小
-        const wallGeometry = new THREE.PlaneGeometry(width + borderThickness, borderThickness); // 寬度可以稍微寬一點
-        const wallGeometryVertical = new THREE.PlaneGeometry(borderThickness, height + borderThickness);
+                engine = Engine.create();
+                world = engine.world;
+                engine.gravity.y = 0; // 關閉重力，由陀螺儀控制
 
-        // 上牆
-        const topWallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
-        topWallMesh.position.set(0, -height / 2 - borderThickness / 2, 0); // Matter.js 的原點在左上角，Three.js 的原點在中心
-        scene.add(topWallMesh);
-        wallMeshes.push(topWallMesh);
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                const wallThick = 100;
 
-        // 下牆
-        const bottomWallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
-        bottomWallMesh.position.set(0, height / 2 + borderThickness / 2, 0);
-        scene.add(bottomWallMesh);
-        wallMeshes.push(bottomWallMesh);
+                // 建立牆壁 (看不見的物理牆)
+                const walls = [
+                    Bodies.rectangle(width/2, -wallThick/2, width, wallThick, { isStatic: true }), // 上
+                    Bodies.rectangle(width/2, height + wallThick/2, width, wallThick, { isStatic: true }), // 下
+                    Bodies.rectangle(-wallThick/2, height/2, wallThick, height, { isStatic: true }), // 左
+                    Bodies.rectangle(width + wallThick/2, height/2, wallThick, height, { isStatic: true }) // 右
+                ];
+                World.add(world, walls);
 
-        // 左牆
-        const leftWallMesh = new THREE.Mesh(wallGeometryVertical, wallMaterial);
-        leftWallMesh.position.set(-width / 2 - borderThickness / 2, 0, 0);
-        scene.add(leftWallMesh);
-        wallMeshes.push(leftWallMesh);
+                // 建立球體
+                const ballColors = [0xff0055, 0x00ffaa, 0xffff00, 0x00ccff, 0xaa00ff];
+                
+                for(let i=0; i<6; i++) {
+                    const radius = 25 + Math.random() * 15; // 隨機半徑 25~40
+                    const x = Math.random() * (width - 100) + 50;
+                    const y = Math.random() * (height - 100) + 50;
+                    
+                    // 物理球
+                    const mBall = Bodies.circle(x, y, radius, {
+                        restitution: 0.9, // 高彈性
+                        friction: 0.001,  // 低摩擦
+                        frictionAir: 0.02, // 空氣阻力，讓球不要永遠停不下來
+                        density: 0.05
+                    });
+                    World.add(world, mBall);
+                    matterBalls.push(mBall);
 
-        // 右牆
-        const rightWallMesh = new THREE.Mesh(wallGeometryVertical, wallMaterial);
-        rightWallMesh.position.set(width / 2 + borderThickness / 2, 0, 0);
-        scene.add(rightWallMesh);
-        wallMeshes.push(rightWallMesh);
-    }
+                    // 3D 球
+                    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: ballColors[i % ballColors.length],
+                        shininess: 100,
+                        specular: 0x444444
+                    });
+                    const tBall = new THREE.Mesh(geometry, material);
+                    scene.add(tBall);
+                    threeBalls.push(tBall);
+                }
+            }
 
-    // 將 Matter.js 的座標轉換為 Three.js 的座標 (Matter.js 原點在左上，Three.js 原點在中心)
-    function convertToThreeCoords(x, y, radius) {
-        const gameWidth = Engine.bounds.max.x - Engine.bounds.min.x;
-        const gameHeight = Engine.bounds.max.y - Engine.bounds.min.y;
+            // --- 3. 遊戲循環 ---
+            function animate() {
+                requestAnimationFrame(animate);
 
-        // 將 Matter.js 的左上角原點轉換為以中心為原點
-        const threeX = x - gameWidth / 2;
-        const threeY = (gameHeight / 2) - y; // Matter.js 的 Y 軸向下增加，Three.js 向上增加
-        
-        return { x: threeX, y: threeY, z: radius }; // Z 軸設定為半徑，讓球體底部在板上
-    }
+                // 1. 更新物理引擎
+                Matter.Engine.update(engine, 1000 / 60);
 
-    // --- MATTER.js 物理引擎設定 ---
-    const Engine = Matter.Engine,
-          Render = Matter.Render, // 我們不用 Matter.Render，自己用 Three.js 渲染
-          Runner = Matter.Runner,
-          Bodies = Matter.Bodies,
-          Composite = Matter.Composite,
-          World = Matter.World,
-          Events = Matter.Events;
+                // 2. 計算施力 (陀螺儀 + 鍵盤)
+                let fx = 0, fy = 0;
+                const forceScale = 0.0002; // 力道係數
 
-    const engine = Engine.create();
-    const world = engine.world;
-    engine.gravity.y = 0; // 關閉 Matter.js 預設重力
+                // 鍵盤
+                if(keys['ArrowUp']) fy -= 1;
+                if(keys['ArrowDown']) fy += 1;
+                if(keys['ArrowLeft']) fx -= 1;
+                if(keys['ArrowRight']) fx += 1;
 
-    const gameWidth = container.clientWidth;
-    const gameHeight = container.clientHeight;
+                // 陀螺儀
+                fx += tiltX * 0.1; 
+                fy += tiltY * 0.1;
 
-    // 設定 Matter.js 世界邊界 (Three.js 的牆面會對應這些邊界)
-    World.add(world, [
-        Bodies.rectangle(gameWidth / 2, -10, gameWidth, 20, { isStatic: true, restitution: 0.8 }), // 上牆
-        Bodies.rectangle(gameWidth / 2, gameHeight + 10, gameWidth, 20, { isStatic: true, restitution: 0.8 }), // 下牆
-        Bodies.rectangle(-10, gameHeight / 2, 20, gameHeight, { isStatic: true, restitution: 0.8 }), // 左牆
-        Bodies.rectangle(gameWidth + 10, gameHeight / 2, 20, gameHeight, { isStatic: true, restitution: 0.8 }) // 右牆
-    ]);
+                // 對所有球施力
+                matterBalls.forEach(ball => {
+                    Matter.Body.applyForce(ball, ball.position, {
+                        x: fx * forceScale * ball.mass,
+                        y: fy * forceScale * ball.mass
+                    });
+                });
 
-    const numBalls = 5; // 球的數量
-    const ballOptions = [
-        { radius: 25, color: 0xff00ff, restitution: 0.9, friction: 0.01, mass: 1 }, // 大球，紫色
-        { radius: 20, color: 0x00ffff, restitution: 0.9, friction: 0.01, mass: 0.8 }, // 中球，青色
-        { radius: 15, color: 0xffff00, restitution: 0.9, friction: 0.01, mass: 0.6 }, // 小球，黃色
-        { radius: 18, color: 0xffa500, restitution: 0.9, friction: 0.01, mass: 0.7 }, // 中球，橘色
-        { radius: 22, color: 0x00ff00, restitution: 0.9, friction: 0.01, mass: 0.9 }  // 中大球，綠色
-    ];
-    const matterBalls = []; // 存放 Matter.js 的物理球體
+                // 3. 同步 物理 -> 3D
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                for(let i=0; i<matterBalls.length; i++) {
+                    const mBall = matterBalls[i];
+                    const tBall = threeBalls[i];
 
-    for (let i = 0; i < numBalls; i++) {
-        const opt = ballOptions[i % ballOptions.length];
-        const x = Math.random() * (gameWidth - opt.radius * 2) + opt.radius;
-        const y = Math.random() * (gameHeight - opt.radius * 2) + opt.radius;
-        const matterBall = Bodies.circle(x, y, opt.radius, {
-            restitution: opt.restitution, // 彈力
-            friction: opt.friction, // 摩擦力
-            density: opt.mass / (Math.PI * opt.radius * opt.radius), // 密度影響質量
-            render: { fillStyle: `#${opt.color.toString(16).padStart(6, '0')}` }
-        });
-        World.add(world, matterBall);
-        matterBalls.push(matterBall);
+                    // Matter.js (0,0 在左上) -> Three.js (0,0 在中心)
+                    tBall.position.x = mBall.position.x - width / 2;
+                    tBall.position.y = -(mBall.position.y - height / 2); // Y軸反轉
+                    
+                    // 簡單的旋轉效果 (根據速度)
+                    tBall.rotation.x += mBall.velocity.y * 0.05;
+                    tBall.rotation.z -= mBall.velocity.x * 0.05;
+                }
 
-        // 同步創建 Three.js 球體
-        const geometry = new THREE.SphereGeometry(opt.radius, 32, 32);
-        const material = new THREE.MeshPhongMaterial({
-            color: opt.color,
-            specular: 0x999999, // 鏡面反射顏色
-            shininess: 100 // 光澤度
-        });
-        const threeBall = new THREE.Mesh(geometry, material);
-        scene.add(threeBall);
-        threeBalls.push(threeBall);
-    }
+                // 渲染
+                renderer.render(scene, camera);
+            }
 
-    // --- 遊戲控制與狀態 ---
-    const debugInfo = document.getElementById('debug-info');
-    const startBtn = document.getElementById('start-btn');
-    const statusText = document.getElementById('status');
+            // --- 4. 事件監聽 ---
+            window.addEventListener('resize', () => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                renderer.setSize(w, h);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                // 注意：物理牆壁沒重新調整，手機轉向可能會有些問題，建議鎖定直向
+            });
 
-    let tiltX = 0; // 左右傾斜 (Gamma)
-    let tiltY = 0; // 前後傾斜 (Beta)
+            window.addEventListener('keydown', e => keys[e.key] = true);
+            window.addEventListener('keyup', e => keys[e.key] = false);
 
-    // 判斷是否需要顯示授權按鈕 (針對 iOS 13+)
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        startBtn.style.display = 'block';
-        startBtn.addEventListener('click', () => {
-            DeviceOrientationEvent.requestPermission()
-                .then(response => {
-                    if (response === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation);
-                        startBtn.style.display = 'none';
-                        statusText.innerText = '平衡你的世界！';
-                    } else {
-                        alert('需要陀螺儀權限才能遊玩！');
-                        statusText.innerText = '授權失敗，請重試或使用鍵盤。';
-                    }
-                })
-                .catch(console.error);
-        });
-    } else {
-        // Android 或舊版 iOS 直接監聽
-        window.addEventListener('deviceorientation', handleOrientation);
-        statusText.innerText = '平衡你的世界！';
-    }
+            // iOS 權限按鈕處理
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                startBtn.style.display = 'inline-block';
+                startBtn.addEventListener('click', () => {
+                    DeviceOrientationEvent.requestPermission()
+                        .then(resp => {
+                            if (resp === 'granted') {
+                                startBtn.style.display = 'none';
+                                statusText.innerText = "遊戲開始！";
+                                window.addEventListener('deviceorientation', handleOrientation);
+                            } else {
+                                alert("需要權限才能遊玩");
+                            }
+                        })
+                        .catch(console.error);
+                });
+            } else {
+                // Android / PC
+                statusText.innerText = "遊戲開始！(直接搖晃)";
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
 
-    function handleOrientation(event) {
-        const x = event.gamma;
-        const y = event.beta;
+            function handleOrientation(event) {
+                const x = event.gamma; // 左右 -90 ~ 90
+                const y = event.beta;  // 前後 -180 ~ 180
+                if (x !== null && y !== null) {
+                    // 限制角度，避免力道過大
+                    tiltX = Math.max(-40, Math.min(40, x));
+                    tiltY = Math.max(-40, Math.min(40, y));
+                    debugInfo.innerText = `X: ${tiltX.toFixed(0)} | Y: ${tiltY.toFixed(0)}`;
+                }
+            }
 
-        if (x !== null && y !== null) {
-            tiltX = Math.max(-45, Math.min(45, x));
-            tiltY = Math.max(-45, Math.min(45, y));
-            debugInfo.innerText = `X: ${tiltX.toFixed(1)} | Y: ${tiltY.toFixed(1)}`;
+            // 啟動
+            initThree();
+            initPhysics();
+            animate();
         }
-    }
-
-    // 電腦版鍵盤測試
-    const keys = {};
-    window.addEventListener('keydown', e => { keys[e.code] = true; });
-    window.addEventListener('keyup', e => { keys[e.code] = false; });
-
-    // --- 遊戲循環 ---
-    function gameLoop() {
-        // 更新 Matter.js 物理引擎
-        Engine.update(engine, 1000 / 60); // 1000/60 是每秒 60 幀
-
-        // 應用陀螺儀/鍵盤力道
-        let forceX = 0;
-        let forceY = 0;
-        const tiltForceMultiplier = 0.00005; // 調整力道強度
-        const keyboardForceMultiplier = 0.0005; // 鍵盤力道
-
-        if (keys['ArrowLeft']) forceX -= keyboardForceMultiplier;
-        if (keys['ArrowRight']) forceX += keyboardForceMultiplier;
-        if (keys['ArrowUp']) forceY -= keyboardForceMultiplier;
-        if (keys['ArrowDown']) forceY += keyboardForceMultiplier;
-
-        forceX += tiltX * tiltForceMultiplier;
-        forceY += tiltY * tiltForceMultiplier;
-
-        matterBalls.forEach(ball => {
-            // 對每個球體施加相同的力
-            Matter.Body.applyForce(ball, ball.position, { x: forceX * ball.mass, y: forceY * ball.mass });
-        });
-
-        // 渲染 Three.js 場景
-        renderThreeScene();
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    function renderThreeScene() {
-        // 將 Matter.js 物體的位置和旋轉同步到 Three.js 物體
-        matterBalls.forEach((matterBall, index) => {
-            const threeBall = threeBalls[index];
-            const { x, y, z } = convertToThreeCoords(matterBall.position.x, matterBall.position.y, matterBall.circleRadius);
-            threeBall.position.set(x, y, z); // Matter.js 物體是 2D 的，z 軸我們設定為半徑讓它看起來是 3D 的球體
-            threeBall.rotation.z = matterBall.angle; // 同步 Matter.js 的旋轉
-        });
-
-        renderer.render(scene, camera);
-    }
-
-    // 視窗大小改變時，調整渲染器和相機
-    window.addEventListener('resize', () => {
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-
-        // Matter.js 邊界也需要更新，但為了簡化，目前假設遊戲區域是固定的
-        // 如果遊戲區域大小可變，需要重新創建 Matter.js 牆體
-    });
-
-    // 初始設定和啟動
-    initThreeScene();
-    gameLoop();
-
-</script>
+    </script>
 </body>
 </html>
