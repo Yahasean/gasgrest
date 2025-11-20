@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D 淺盒互動版</title>
+    <title>3D 互動流暢版</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
-            touch-action: none;
+            touch-action: none; /* 禁止預設縮放 */
             font-family: 'Segoe UI', sans-serif;
         }
 
@@ -21,23 +21,24 @@
             top: 0;
             left: 0;
             width: 100%;
-            background: rgba(20, 20, 30, 0.9);
+            background: rgba(10, 15, 30, 0.85);
             color: white;
-            padding: 15px 20px;
+            padding: 10px 20px 20px 20px;
             z-index: 100;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             transition: transform 0.3s ease;
+            backdrop-filter: blur(10px);
         }
 
         #control-panel.collapsed { transform: translateY(-100%); }
 
         #toggle-btn {
             position: fixed;
-            top: 15px;
-            right: 15px;
+            top: 10px;
+            right: 10px;
             z-index: 101;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255,255,255,0.2);
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -53,24 +54,35 @@
         .control-group {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
+            margin-top: 12px;
         }
-        .control-group:last-child { margin-bottom: 0; }
         
         .control-group label {
             width: 50px;
-            font-size: 12px;
+            font-size: 13px;
             color: #ccc;
+            font-weight: 500;
         }
         .control-group input {
             flex: 1;
             margin: 0 15px;
             cursor: pointer;
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
+            appearance: none;
+        }
+        .control-group input::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00d2ff;
         }
         .control-group span {
             width: 30px;
             text-align: right;
-            font-size: 12px;
+            font-size: 13px;
             color: #00d2ff;
         }
 
@@ -81,7 +93,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.92);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -89,14 +101,15 @@
             flex-direction: column;
         }
         #start-btn {
-            padding: 15px 40px;
-            font-size: 18px;
-            background: #00d2ff;
+            padding: 18px 50px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
             border: none;
-            border-radius: 30px;
-            color: #000;
+            border-radius: 50px;
+            color: white;
             font-weight: bold;
             cursor: pointer;
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);
         }
         
         #fx-text {
@@ -118,8 +131,8 @@
 <body>
 
     <div id="start-overlay">
-        <button id="start-btn">啟動 3D 互動</button>
-        <p style="color:#888; margin-top:15px; font-size:12px;">包含音效與物理碰撞</p>
+        <button id="start-btn">啟動 (START)</button>
+        <p style="color:#888; margin-top:20px; font-size:13px;">支援：搖晃、傾斜、手指滑動</p>
     </div>
 
     <div id="fx-text">SHAKE!</div>
@@ -128,13 +141,13 @@
     <div id="control-panel">
         <div class="control-group">
             <label>數量</label>
-            <input type="range" id="input-count" min="10" max="150" value="50" step="5">
-            <span id="val-count">50</span>
+            <input type="range" id="input-count" min="10" max="150" value="60" step="5">
+            <span id="val-count">60</span>
         </div>
         <div class="control-group">
             <label>大小</label>
-            <input type="range" id="input-size" min="0.5" max="2.5" value="1.2" step="0.1">
-            <span id="val-size">1.2</span>
+            <input type="range" id="input-size" min="0.5" max="2.0" value="1.1" step="0.1">
+            <span id="val-size">1.1</span>
         </div>
         <div class="control-group">
             <label>隨機</label>
@@ -163,7 +176,7 @@
         import * as THREE from 'three';
         import * as CANNON from 'cannon-es';
 
-        // --- 1. 音效系統 (Audio) ---
+        // --- 音效 ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
         let isAudioReady = false;
@@ -174,92 +187,50 @@
         }
 
         function playClink(intensity) {
-            if (!isAudioReady || intensity < 2) return;
+            if (!isAudioReady || intensity < 1.5) return;
             const t = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            
-            // 清脆的高頻音 (1500 ~ 3000Hz)
-            osc.frequency.value = 1500 + Math.random() * 1500;
+            osc.frequency.value = 1800 + Math.random() * 1200;
             osc.type = 'sine';
-            
-            const vol = Math.min(intensity * 0.05, 0.4);
+            const vol = Math.min(intensity * 0.05, 0.3);
             gain.gain.setValueAtTime(vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1); // 快速衰減
-
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
             osc.start(t);
             osc.stop(t + 0.15);
         }
 
-        function playSwoosh() {
-            if(!isAudioReady) return;
-            const t = audioCtx.currentTime;
-            const noise = audioCtx.createBufferSource();
-            const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.5, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for(let i=0; i<buffer.length; i++) data[i] = Math.random()*2-1;
-            noise.buffer = buffer;
-            
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(200, t);
-            filter.frequency.linearRampToValueAtTime(800, t+0.2);
-
-            const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.3, t);
-            gain.gain.linearRampToValueAtTime(0, t+0.3);
-            
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-            noise.start(t);
-        }
-
-        // --- 2. Three.js 場景 ---
+        // --- Three.js ---
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
         
-        // 相機設定：決定視窗大小的關鍵
-        const fov = 40;
-        const cameraZ = 25; // 相機拉遠一點，視野比較好控
+        const fov = 45;
+        const cameraZ = 25;
         const camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 0, cameraZ);
 
-        // 燈光
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(10, 20, 10);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 10, 10);
         scene.add(dirLight);
 
-        // --- 3. 3D 粒子特效 (Particle System) ---
+        // --- 粒子特效 ---
         const particles = [];
-        // 粒子幾何與材質 (共用以提升效能)
-        const particleGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15); // 小方塊碎片
-        const particleMat = new THREE.MeshBasicMaterial({ 
-            color: 0xffffff, 
-            transparent: true, 
-            opacity: 0.8 
-        });
+        const particleGeo = new THREE.PlaneGeometry(0.2, 0.2);
+        const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
 
         function spawnParticles(pos, count) {
             for(let i=0; i<count; i++) {
                 const mesh = new THREE.Mesh(particleGeo, particleMat);
                 mesh.position.copy(pos);
-                // 隨機噴發方向
-                mesh.userData.velocity = new THREE.Vector3(
-                    (Math.random()-0.5) * 10,
-                    (Math.random()-0.5) * 10,
-                    (Math.random()-0.5) * 5
-                );
+                mesh.userData.velocity = new THREE.Vector3((Math.random()-0.5)*8, (Math.random()-0.5)*8, (Math.random()-0.5)*5);
                 mesh.userData.life = 1.0;
-                // 隨機旋轉
-                mesh.rotation.set(Math.random(), Math.random(), Math.random());
+                mesh.rotation.z = Math.random() * Math.PI;
                 scene.add(mesh);
                 particles.push(mesh);
             }
@@ -269,11 +240,8 @@
             for(let i = particles.length-1; i>=0; i--) {
                 const p = particles[i];
                 p.position.addScaledVector(p.userData.velocity, dt);
-                p.userData.life -= dt * 2.0; // 消失速度
+                p.userData.life -= dt * 3.0;
                 p.material.opacity = p.userData.life;
-                p.rotation.x += 0.1;
-                p.rotation.y += 0.1;
-
                 if(p.userData.life <= 0) {
                     scene.remove(p);
                     particles.splice(i, 1);
@@ -281,28 +249,20 @@
             }
         }
 
-        // --- 4. Cannon-es 物理世界 ---
-        const world = new CANNON.World({
-            gravity: new CANNON.Vec3(0, -9.8, 0),
-        });
+        // --- Cannon-es 物理 ---
+        const world = new CANNON.World();
+        // 1. 關鍵修復：預設一個向下的重力，確保球不會浮在半空
+        world.gravity.set(0, -10, -2); 
 
-        const wallMaterial = new CANNON.Material('wall');
-        const ballMaterial = new CANNON.Material('ball');
-        const ballContact = new CANNON.ContactMaterial(ballMaterial, ballMaterial, {
-            friction: 0.1, restitution: 0.7 // 彈性調整
-        });
-        const wallContact = new CANNON.ContactMaterial(wallMaterial, ballMaterial, {
-            friction: 0.1, restitution: 0.6
-        });
-        world.addContactMaterial(ballContact);
-        world.addContactMaterial(wallContact);
+        const mat = new CANNON.Material();
+        // 2. 關鍵修復：摩擦力設為 0，防止球黏在牆壁上
+        const contactMat = new CANNON.ContactMaterial(mat, mat, { friction: 0.0, restitution: 0.7 });
+        world.addContactMaterial(contactMat);
 
         let balls = [];
         let ballMeshes = [];
         let wallBodies = [];
 
-        // --- 關鍵：計算可視邊界 (Frustum) ---
-        // 這樣可以保證牆壁永遠貼齊你的螢幕邊緣
         function getVisibleSize() {
             const vFov = fov * Math.PI / 180;
             const height = 2 * Math.tan(vFov / 2) * cameraZ;
@@ -311,30 +271,27 @@
         }
 
         function updateWalls() {
-            // 移除舊牆壁
             wallBodies.forEach(b => world.removeBody(b));
             wallBodies.length = 0;
 
             const { width, height } = getVisibleSize();
             const w = width / 2;
             const h = height / 2;
-            const d = 2.0; // 盒子深度 (淺淺的)
-            const thick = 10; // 牆壁厚度
+            const d = 2.5; // 3. 關鍵修復：加深盒子，讓球有空間錯開
+            const thick = 10;
 
-            // 定義 6 面牆 (前後左右上下)
-            // 調整 Z 軸深度：前後牆夾住 Z = 0 附近
             const wallsData = [
-                { pos: [0, h + thick/2, 0], size: [w + thick, thick, d + thick] }, // Top
-                { pos: [0, -h - thick/2, 0], size: [w + thick, thick, d + thick] }, // Bottom
-                { pos: [-w - thick/2, 0, 0], size: [thick, h + thick, d + thick] }, // Left
-                { pos: [w + thick/2, 0, 0], size: [thick, h + thick, d + thick] }, // Right
-                { pos: [0, 0, -d/2 - thick/2], size: [w + thick, h + thick, thick] }, // Back
-                { pos: [0, 0, d/2 + thick/2], size: [w + thick, h + thick, thick] }, // Front (Glass)
+                { pos: [0, h + thick/2, 0], size: [w + thick, thick, d + thick] },
+                { pos: [0, -h - thick/2, 0], size: [w + thick, thick, d + thick] },
+                { pos: [-w - thick/2, 0, 0], size: [thick, h + thick, d + thick] },
+                { pos: [w + thick/2, 0, 0], size: [thick, h + thick, d + thick] },
+                { pos: [0, 0, -d/2 - thick/2], size: [w + thick, h + thick, thick] },
+                { pos: [0, 0, d/2 + thick/2], size: [w + thick, h + thick, thick] }, 
             ];
 
             wallsData.forEach(info => {
                 const shape = new CANNON.Box(new CANNON.Vec3(info.size[0], info.size[1], info.size[2]));
-                const body = new CANNON.Body({ mass: 0, material: wallMaterial });
+                const body = new CANNON.Body({ mass: 0, material: mat });
                 body.addShape(shape);
                 body.position.set(...info.pos);
                 world.addBody(body);
@@ -342,12 +299,11 @@
             });
         }
 
-        // --- 球體管理 ---
-        const colors = [0xff3366, 0x00ccff, 0xffcc00, 0xcc33ff, 0x00ff99];
-        const ballGeo = new THREE.SphereGeometry(1, 32, 32); // 基礎幾何
+        const ballColors = [0xff3366, 0x00ccff, 0xffcc00, 0xcc33ff, 0x00ff99];
+        const ballGeo = new THREE.SphereGeometry(1, 24, 24);
+        const ballThreeMat = new THREE.MeshStandardMaterial({ roughness: 0.2, metalness: 0.1 });
 
         function rebuildBalls() {
-            // 清除舊球
             balls.forEach(b => world.removeBody(b));
             ballMeshes.forEach(m => scene.remove(m));
             balls = [];
@@ -356,120 +312,146 @@
             const count = parseInt(document.getElementById('input-count').value);
             const baseSize = parseFloat(document.getElementById('input-size').value);
             const randPercent = parseInt(document.getElementById('input-random').value) / 100;
+            const { width, height } = getVisibleSize();
 
             for(let i=0; i<count; i++) {
-                // 大小計算
-                const variation = (Math.random() * 2 - 1) * randPercent; // -1 ~ 1 * random
-                let radius = baseSize * (1 + variation * 0.5); // +/- 50% variation
-                radius = Math.max(0.2, radius); // 最小限制
+                const r = baseSize * (1 + (Math.random()*2-1)*randPercent*0.5);
+                const safeR = Math.max(0.2, r);
 
-                // Physics Body
-                const body = new CANNON.Body({
-                    mass: 1, // 統一質量，或者可以設 radius * 10
-                    material: ballMaterial,
-                    linearDamping: 0.3,
-                    angularDamping: 0.3
-                });
-                body.addShape(new CANNON.Sphere(radius));
+                const body = new CANNON.Body({ mass: 1, material: mat, linearDamping: 0.2 });
+                body.addShape(new CANNON.Sphere(safeR));
                 
-                // 隨機位置 (避免卡牆)
-                const rangeX = getVisibleSize().width / 2 - 1;
-                const rangeY = getVisibleSize().height / 2 - 1;
+                // 4. 關鍵修復：生成位置盡量散開，不要全部疊在 (0,0)
                 body.position.set(
-                    (Math.random()-0.5) * rangeX,
-                    (Math.random()-0.5) * rangeY,
-                    (Math.random()-0.5) * 1 // Z軸淺淺的隨機
+                    (Math.random()-0.5) * width * 0.8,
+                    (Math.random()-0.5) * height * 0.8,
+                    (Math.random()-0.5) * 2
                 );
-                
-                // 碰撞監聽 (特效+音效)
+
                 body.addEventListener('collide', (e) => {
-                    const v = e.contact.getImpactVelocityAlongNormal();
-                    if(Math.abs(v) > 3) {
-                        playClink(Math.abs(v));
-                        // 噴粒子：轉換 Cannon Vec3 到 Three Vec3
-                        const contactPos = new THREE.Vector3(
-                            body.position.x, 
-                            body.position.y, 
-                            body.position.z
-                        );
-                        // 只有夠大力才噴，避免效能問題
-                        if(Math.abs(v) > 5) spawnParticles(contactPos, 3);
+                    const v = Math.abs(e.contact.getImpactVelocityAlongNormal());
+                    if(v > 2) {
+                        playClink(v);
+                        if(v > 5) spawnParticles(new THREE.Vector3(body.position.x, body.position.y, body.position.z), 3);
                     }
                 });
 
                 world.addBody(body);
                 balls.push(body);
 
-                // Three Mesh
-                const mat = new THREE.MeshStandardMaterial({
-                    color: colors[Math.floor(Math.random() * colors.length)],
-                    roughness: 0.2,
-                    metalness: 0.1
-                });
-                const mesh = new THREE.Mesh(ballGeo, mat);
-                mesh.scale.set(radius, radius, radius);
-                mesh.castShadow = true;
+                const mesh = new THREE.Mesh(ballGeo, ballThreeMat.clone());
+                mesh.material.color.setHex(ballColors[Math.floor(Math.random() * ballColors.length)]);
+                mesh.scale.set(safeR, safeR, safeR);
                 scene.add(mesh);
                 ballMeshes.push(mesh);
             }
         }
 
-
-        // --- 5. 互動邏輯 ---
+        // --- 感測器與互動 ---
         const gravitySlider = document.getElementById('input-gravity');
         let lastAcc = {x:0, y:0, z:0};
         let shakeCooldown = false;
         const fxText = document.getElementById('fx-text');
 
         function handleOrientation(e) {
-            const gVal = parseFloat(gravitySlider.value); // 0 ~ 20
-            if(e.gamma == null) return;
-            
-            // 轉換角度為重力向量
-            // X: gamma (左右), Y: beta (前後), Z: 傾向於 -5 讓球貼背
-            const radX = (e.gamma || 0) * Math.PI / 180;
-            const radY = (e.beta || 0) * Math.PI / 180;
+            // 5. 關鍵修復：過濾無效數據
+            if (e.gamma === null || e.beta === null) return;
 
+            const gVal = parseFloat(gravitySlider.value);
+            const radX = e.gamma * Math.PI / 180;
+            const radY = e.beta * Math.PI / 180;
+            
+            // 只有在數據有效時才更新重力
             world.gravity.set(
                 Math.sin(radX) * gVal,
-                Math.sin(radY) * -gVal, // 注意 Canvas Y 向上
-                -2 // Z軸給一點點重力向後，讓球不要一直貼著玻璃(鏡頭)
+                Math.sin(radY) * -gVal,
+                -2 // 保持一點向後的重力，讓球貼著背板
             );
         }
 
         function handleMotion(e) {
             const acc = e.accelerationIncludingGravity || e.acceleration;
             if(!acc) return;
-            
             const dx = acc.x - lastAcc.x;
             const dy = acc.y - lastAcc.y;
             const dz = acc.z - lastAcc.z;
             const total = Math.abs(dx)+Math.abs(dy)+Math.abs(dz);
 
-            // Shake
             if(!shakeCooldown && total > 20) {
                 shakeCooldown = true;
                 fxText.style.opacity = 1;
-                fxText.style.transform = `translate(-50%, -50%) rotate(${Math.random()*30-15}deg)`;
                 setTimeout(()=>fxText.style.opacity=0, 300);
                 setTimeout(()=>shakeCooldown=false, 300);
-
-                playSwoosh();
-                if(navigator.vibrate) navigator.vibrate(150);
-
-                // 炸開
+                if(navigator.vibrate) navigator.vibrate(100);
                 balls.forEach(b => {
-                    b.applyImpulse(new CANNON.Vec3(
-                        (Math.random()-0.5)*10,
-                        (Math.random()-0.5)*10,
-                        (Math.random()-0.5)*5
-                    ), b.position);
+                    b.applyImpulse(new CANNON.Vec3((Math.random()-0.5)*8, (Math.random()-0.5)*8, (Math.random()-0.5)*5), b.position);
                 });
             }
             lastAcc = {x:acc.x, y:acc.y, z:acc.z};
         }
 
-        // --- UI 更新 ---
+        // 6. 新增功能：滑鼠/觸控推球 (在沒有陀螺儀時也能玩)
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        function onTouchMove(event) {
+            event.preventDefault(); // 防止滾動
+            
+            // 取得觸控點 (只取第一個手指)
+            let cx, cy;
+            if (event.changedTouches) {
+                cx = event.changedTouches[0].clientX;
+                cy = event.changedTouches[0].clientY;
+            } else {
+                cx = event.clientX;
+                cy = event.clientY;
+            }
+
+            // 轉換為 Normalized Device Coordinates (-1 to +1)
+            mouse.x = (cx / window.innerWidth) * 2 - 1;
+            mouse.y = -(cy / window.innerHeight) * 2 + 1;
+
+            // 在 3D 空間中產生一個「推力場」
+            // 這裡我們簡化：直接對所有球施加一個遠離滑鼠點的力
+            // 先算出滑鼠在 Z=0 平面的世界座標
+            raycaster.setFromCamera(mouse, camera);
+            const targetZ = 0;
+            const vec = new THREE.Vector3();
+            raycaster.ray.at(cameraZ - targetZ, vec); // 粗略估計
+
+            balls.forEach(b => {
+                const dx = b.position.x - vec.x;
+                const dy = b.position.y - vec.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                // 如果球在手指附近 (半徑 5 單位內)
+                if (dist < 5) {
+                    const force = (5 - dist) * 2; // 越近力越大
+                    b.applyForce(new CANNON.Vec3(dx * force, dy * force, 0), b.position);
+                }
+            });
+        }
+        
+        window.addEventListener('mousemove', onTouchMove);
+        window.addEventListener('touchmove', onTouchMove, { passive: false });
+
+
+        // --- Loop & Init ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1);
+            world.step(1/60, dt, 3);
+            
+            for(let i=0; i<balls.length; i++) {
+                ballMeshes[i].position.copy(balls[i].position);
+                ballMeshes[i].quaternion.copy(balls[i].quaternion);
+            }
+            updateParticles(dt);
+            renderer.render(scene, camera);
+        }
+
+        // UI update...
         const inputs = {
             count: document.getElementById('input-count'),
             size: document.getElementById('input-size'),
@@ -482,70 +464,38 @@
             random: document.getElementById('val-random'),
             gravity: document.getElementById('val-gravity')
         };
-
-        function onUIChange(k) {
+        function uiUpdate(k) {
             spans[k].innerText = inputs[k].value;
-            if(k !== 'gravity') {
-                clearTimeout(window.rebuildTimer);
-                window.rebuildTimer = setTimeout(rebuildBalls, 100);
-            }
+            if(k!=='gravity') { clearTimeout(window.t); window.t=setTimeout(rebuildBalls, 100); }
         }
-        Object.keys(inputs).forEach(k => inputs[k].addEventListener('input', () => onUIChange(k)));
+        Object.keys(inputs).forEach(k=>inputs[k].addEventListener('input',()=>uiUpdate(k)));
+        document.getElementById('toggle-btn').onclick=()=>document.getElementById('control-panel').classList.toggle('collapsed');
 
-        document.getElementById('toggle-btn').addEventListener('click', () => {
-            document.getElementById('control-panel').classList.toggle('collapsed');
-        });
-
-        // --- 渲染 Loop ---
-        const clock = new THREE.Clock();
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const dt = Math.min(clock.getDelta(), 0.1); // 限制最大 dt 避免切換分頁後爆炸
-
-            world.step(1/60, dt, 3);
-
-            // 同步位置
-            for(let i=0; i<balls.length; i++) {
-                ballMeshes[i].position.copy(balls[i].position);
-                ballMeshes[i].quaternion.copy(balls[i].quaternion);
-            }
-
-            // 更新粒子
-            updateParticles(dt);
-
-            renderer.render(scene, camera);
-        }
-
-        // --- 啟動 ---
         function start() {
             document.getElementById('start-overlay').style.display = 'none';
-            
             window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.aspect = window.innerWidth/window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
-                updateWalls(); // 重要：視窗改變時牆壁要跟著變
+                updateWalls();
             });
             window.addEventListener('deviceorientation', handleOrientation);
             window.addEventListener('devicemotion', handleMotion);
-
-            updateWalls();
+            
+            updateWalls(); // 立即執行一次確保牆壁正確
             rebuildBalls();
             animate();
         }
 
-        document.getElementById('start-btn').addEventListener('click', () => {
+        document.getElementById('start-btn').onclick = () => {
             initAudio();
             if(audioCtx.state === 'suspended') audioCtx.resume();
-            
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(r => { if(r==='granted') start(); }).catch(e => start());
+                DeviceOrientationEvent.requestPermission().then(r => { if(r==='granted') start(); }).catch(()=>start());
             } else {
                 start();
             }
-        });
-
+        };
     </script>
 </body>
 </html>
