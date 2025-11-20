@@ -3,76 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D 玻璃音箱</title>
+    <title>3D 淺盒互動版</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000;
-            /* 漸層背景 */
-            background: radial-gradient(circle at center, #1a1a2e, #000000);
+            background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
             touch-action: none;
             font-family: 'Segoe UI', sans-serif;
         }
 
         canvas { display: block; }
 
-        #ui-layer {
-            position: absolute;
+        /* --- 控制面板 --- */
+        #control-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(20, 20, 30, 0.9);
+            color: white;
+            padding: 15px 20px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        #control-panel.collapsed { transform: translateY(-100%); }
+
+        #toggle-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 101;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .control-group:last-child { margin-bottom: 0; }
+        
+        .control-group label {
+            width: 50px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        .control-group input {
+            flex: 1;
+            margin: 0 15px;
+            cursor: pointer;
+        }
+        .control-group span {
+            width: 30px;
+            text-align: right;
+            font-size: 12px;
+            color: #00d2ff;
+        }
+
+        /* 啟動頁面 */
+        #start-overlay {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;
+            background: rgba(0,0,0,0.9);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 10;
+            z-index: 200;
+            flex-direction: column;
         }
-
         #start-btn {
-            pointer-events: auto;
             padding: 15px 40px;
-            font-size: 20px;
-            color: white;
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 18px;
+            background: #00d2ff;
+            border: none;
             border-radius: 30px;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
+            color: #000;
             font-weight: bold;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            transition: transform 0.1s;
-            box-shadow: 0 0 20px rgba(0, 100, 255, 0.3);
+            cursor: pointer;
         }
-        #start-btn:active { transform: scale(0.95); }
-
-        #status-text {
-            margin-top: 20px;
-            color: #aaa;
-            font-size: 14px;
-            text-shadow: 0 0 5px black;
-        }
-
-        #debug-info {
+        
+        #fx-text {
             position: absolute;
-            bottom: 10px;
-            left: 10px;
-            color: #555;
-            font-size: 12px;
-            font-family: monospace;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            font-weight: 900;
+            color: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+            text-shadow: 0 0 20px cyan;
+            transition: opacity 0.1s;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui-layer">
-        <button id="start-btn">ENTER 3D BOX</button>
-        <div id="status-text">建議開啟聲音 • 搖晃手機互動</div>
+    <div id="start-overlay">
+        <button id="start-btn">啟動 3D 互動</button>
+        <p style="color:#888; margin-top:15px; font-size:12px;">包含音效與物理碰撞</p>
     </div>
-    <div id="debug-info"></div>
+
+    <div id="fx-text">SHAKE!</div>
+    <button id="toggle-btn">⚙️</button>
+
+    <div id="control-panel">
+        <div class="control-group">
+            <label>數量</label>
+            <input type="range" id="input-count" min="10" max="150" value="50" step="5">
+            <span id="val-count">50</span>
+        </div>
+        <div class="control-group">
+            <label>大小</label>
+            <input type="range" id="input-size" min="0.5" max="2.5" value="1.2" step="0.1">
+            <span id="val-size">1.2</span>
+        </div>
+        <div class="control-group">
+            <label>隨機</label>
+            <input type="range" id="input-random" min="0" max="100" value="50" step="10">
+            <span id="val-random">50</span>
+        </div>
+        <div class="control-group">
+            <label>重力</label>
+            <input type="range" id="input-gravity" min="0" max="20" value="10" step="1">
+            <span id="val-gravity">10</span>
+        </div>
+    </div>
 
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
@@ -89,7 +163,7 @@
         import * as THREE from 'three';
         import * as CANNON from 'cannon-es';
 
-        // --- 1. 音效系統 (清脆風鈴版) ---
+        // --- 1. 音效系統 (Audio) ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
         let isAudioReady = false;
@@ -99,311 +173,374 @@
             isAudioReady = true;
         }
 
-        function playChime(velocity) {
-            if (!isAudioReady || velocity < 1.5) return;
-
+        function playClink(intensity) {
+            if (!isAudioReady || intensity < 2) return;
             const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
             
-            // 碰撞力道決定音量
-            const volume = Math.min(velocity * 0.05, 0.6);
-
-            // 建立兩個震盪器來模擬金屬/玻璃的和聲
-            const osc1 = audioCtx.createOscillator();
-            const osc2 = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            // 音調隨機化：讓聲音不會太單調
-            // 基礎頻率高一點 (2000Hz - 3000Hz) 才有清脆感
-            const baseFreq = 2200 + Math.random() * 500;
-
-            osc1.type = 'sine';
-            osc1.frequency.value = baseFreq; // 主音
-
-            osc2.type = 'sine';
-            osc2.frequency.value = baseFreq * 1.5; // 泛音 (5度音)
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
             
-            // 連接
-            osc1.connect(gainNode);
-            osc2.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+            // 清脆的高頻音 (1500 ~ 3000Hz)
+            osc.frequency.value = 1500 + Math.random() * 1500;
+            osc.type = 'sine';
+            
+            const vol = Math.min(intensity * 0.05, 0.4);
+            gain.gain.setValueAtTime(vol, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1); // 快速衰減
 
-            // 音量包絡 (Envelope) - 像敲擊聲
-            gainNode.gain.setValueAtTime(0, t);
-            gainNode.gain.linearRampToValueAtTime(volume, t + 0.01); // 快速起音 (Attack)
-            gainNode.gain.exponentialRampToValueAtTime(0.001, t + 1.5); // 長長的餘韻 (Decay)
-
-            osc1.start(t);
-            osc2.start(t);
-            osc1.stop(t + 1.5);
-            osc2.stop(t + 1.5);
+            osc.start(t);
+            osc.stop(t + 0.15);
         }
 
-        // --- 2. 3D 場景設定 ---
+        function playSwoosh() {
+            if(!isAudioReady) return;
+            const t = audioCtx.currentTime;
+            const noise = audioCtx.createBufferSource();
+            const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.5, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for(let i=0; i<buffer.length; i++) data[i] = Math.random()*2-1;
+            noise.buffer = buffer;
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(200, t);
+            filter.frequency.linearRampToValueAtTime(800, t+0.2);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.linearRampToValueAtTime(0, t+0.3);
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start(t);
+        }
+
+        // --- 2. Three.js 場景 ---
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
         
-        // 相機位置設定
-        const fov = 45;
-        const cameraZ = 20; // 相機距離
+        // 相機設定：決定視窗大小的關鍵
+        const fov = 40;
+        const cameraZ = 25; // 相機拉遠一點，視野比較好控
         const camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 0, cameraZ);
 
         // 燈光
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 10, 10);
-        dirLight.castShadow = true;
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
-        
-        // 藍色點光，增加科技感
-        const pointLight = new THREE.PointLight(0x0088ff, 100, 50);
-        pointLight.position.set(-5, -5, 5);
-        scene.add(pointLight);
 
-        // --- 3. 物理世界 (Cannon-es) ---
-        const world = new CANNON.World({
-            gravity: new CANNON.Vec3(0, -9.82, 0), // 初始重力向下
+        // --- 3. 3D 粒子特效 (Particle System) ---
+        const particles = [];
+        // 粒子幾何與材質 (共用以提升效能)
+        const particleGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15); // 小方塊碎片
+        const particleMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 0.8 
         });
-        
-        // 物理材質
+
+        function spawnParticles(pos, count) {
+            for(let i=0; i<count; i++) {
+                const mesh = new THREE.Mesh(particleGeo, particleMat);
+                mesh.position.copy(pos);
+                // 隨機噴發方向
+                mesh.userData.velocity = new THREE.Vector3(
+                    (Math.random()-0.5) * 10,
+                    (Math.random()-0.5) * 10,
+                    (Math.random()-0.5) * 5
+                );
+                mesh.userData.life = 1.0;
+                // 隨機旋轉
+                mesh.rotation.set(Math.random(), Math.random(), Math.random());
+                scene.add(mesh);
+                particles.push(mesh);
+            }
+        }
+
+        function updateParticles(dt) {
+            for(let i = particles.length-1; i>=0; i--) {
+                const p = particles[i];
+                p.position.addScaledVector(p.userData.velocity, dt);
+                p.userData.life -= dt * 2.0; // 消失速度
+                p.material.opacity = p.userData.life;
+                p.rotation.x += 0.1;
+                p.rotation.y += 0.1;
+
+                if(p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // --- 4. Cannon-es 物理世界 ---
+        const world = new CANNON.World({
+            gravity: new CANNON.Vec3(0, -9.8, 0),
+        });
+
         const wallMaterial = new CANNON.Material('wall');
         const ballMaterial = new CANNON.Material('ball');
-        
-        // 設定碰撞行為 (高反彈)
-        const wallBallContact = new CANNON.ContactMaterial(wallMaterial, ballMaterial, {
-            friction: 0.0, // 非常滑，像玻璃
-            restitution: 0.6 // 彈性
+        const ballContact = new CANNON.ContactMaterial(ballMaterial, ballMaterial, {
+            friction: 0.1, restitution: 0.7 // 彈性調整
         });
-        world.addContactMaterial(wallBallContact);
-
-        const ballBallContact = new CANNON.ContactMaterial(ballMaterial, ballMaterial, {
-            friction: 0.0,
-            restitution: 0.7
+        const wallContact = new CANNON.ContactMaterial(wallMaterial, ballMaterial, {
+            friction: 0.1, restitution: 0.6
         });
-        world.addContactMaterial(ballBallContact);
+        world.addContactMaterial(ballContact);
+        world.addContactMaterial(wallContact);
 
-        // --- 4. 牆壁與邊界邏輯 (核心：視錐體計算) ---
-        const wallBodies = []; // 儲存牆壁物理體
+        let balls = [];
+        let ballMeshes = [];
+        let wallBodies = [];
 
-        function createWalls() {
+        // --- 關鍵：計算可視邊界 (Frustum) ---
+        // 這樣可以保證牆壁永遠貼齊你的螢幕邊緣
+        function getVisibleSize() {
+            const vFov = fov * Math.PI / 180;
+            const height = 2 * Math.tan(vFov / 2) * cameraZ;
+            const width = height * camera.aspect;
+            return { width, height };
+        }
+
+        function updateWalls() {
             // 移除舊牆壁
             wallBodies.forEach(b => world.removeBody(b));
             wallBodies.length = 0;
 
-            // 計算在 Z=0 平面上的可視寬高
-            // Math.tan 需要弧度
-            const aspect = window.innerWidth / window.innerHeight;
-            const vFov = fov * Math.PI / 180;
-            const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
-            const visibleWidth = visibleHeight * aspect;
+            const { width, height } = getVisibleSize();
+            const w = width / 2;
+            const h = height / 2;
+            const d = 2.0; // 盒子深度 (淺淺的)
+            const thick = 10; // 牆壁厚度
 
-            const w = visibleWidth / 2;
-            const h = visibleHeight / 2;
-            const depth = 3; // 箱子的深度 (Z軸厚度)
-
-            // 建立 6 面牆 (前後左右上下)
-            const thickness = 5;
-            
-            // 牆壁參數陣列: [位置, 旋轉軸, 旋轉角度, 尺寸]
-            // Cannon 的 Plane 是無限大的，但用 Box 比較好控制邊界
+            // 定義 6 面牆 (前後左右上下)
+            // 調整 Z 軸深度：前後牆夾住 Z = 0 附近
             const wallsData = [
-                { pos: [0, h + thickness/2, 0], size: [w + thickness, thickness, depth + thickness] }, // 上
-                { pos: [0, -h - thickness/2, 0], size: [w + thickness, thickness, depth + thickness] }, // 下
-                { pos: [-w - thickness/2, 0, 0], size: [thickness, h + thickness, depth + thickness] }, // 左
-                { pos: [w + thickness/2, 0, 0], size: [thickness, h + thickness, depth + thickness] }, // 右
-                { pos: [0, 0, -depth/2 - thickness/2], size: [w + thickness, h + thickness, thickness] }, // 後
-                { pos: [0, 0, depth/2 + thickness/2], size: [w + thickness, h + thickness, thickness] } // 前 (透明玻璃)
+                { pos: [0, h + thick/2, 0], size: [w + thick, thick, d + thick] }, // Top
+                { pos: [0, -h - thick/2, 0], size: [w + thick, thick, d + thick] }, // Bottom
+                { pos: [-w - thick/2, 0, 0], size: [thick, h + thick, d + thick] }, // Left
+                { pos: [w + thick/2, 0, 0], size: [thick, h + thick, d + thick] }, // Right
+                { pos: [0, 0, -d/2 - thick/2], size: [w + thick, h + thick, thick] }, // Back
+                { pos: [0, 0, d/2 + thick/2], size: [w + thick, h + thick, thick] }, // Front (Glass)
             ];
 
-            wallsData.forEach(data => {
-                const shape = new CANNON.Box(new CANNON.Vec3(data.size[0], data.size[1], data.size[2]));
-                const body = new CANNON.Body({
-                    mass: 0, // 靜態
-                    material: wallMaterial
-                });
+            wallsData.forEach(info => {
+                const shape = new CANNON.Box(new CANNON.Vec3(info.size[0], info.size[1], info.size[2]));
+                const body = new CANNON.Body({ mass: 0, material: wallMaterial });
                 body.addShape(shape);
-                body.position.set(data.pos[0], data.pos[1], data.pos[2]);
+                body.position.set(...info.pos);
                 world.addBody(body);
                 wallBodies.push(body);
             });
         }
 
-        // --- 5. 球體生成 ---
-        const balls = [];
-        const ballMeshes = [];
-        const ballColors = [0xff0055, 0x00ccff, 0xffcc00, 0xaa00ff, 0x00ffaa];
+        // --- 球體管理 ---
+        const colors = [0xff3366, 0x00ccff, 0xffcc00, 0xcc33ff, 0x00ff99];
+        const ballGeo = new THREE.SphereGeometry(1, 32, 32); // 基礎幾何
 
-        function createBalls() {
-            const count = 60;
-            const ballRadius = 0.6; // 在 Three.js 單位中，這大概對應螢幕上的視覺大小
+        function rebuildBalls() {
+            // 清除舊球
+            balls.forEach(b => world.removeBody(b));
+            ballMeshes.forEach(m => scene.remove(m));
+            balls = [];
+            ballMeshes = [];
 
-            const geometry = new THREE.SphereGeometry(ballRadius, 32, 32);
-            
-            // 使用 MeshPhysicalMaterial 模擬亮面塑膠/玻璃質感
-            const baseMaterial = new THREE.MeshPhysicalMaterial({
-                metalness: 0.1,
-                roughness: 0.1,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.1,
-            });
+            const count = parseInt(document.getElementById('input-count').value);
+            const baseSize = parseFloat(document.getElementById('input-size').value);
+            const randPercent = parseInt(document.getElementById('input-random').value) / 100;
 
             for(let i=0; i<count; i++) {
-                // 物理體
-                const shape = new CANNON.Sphere(ballRadius);
+                // 大小計算
+                const variation = (Math.random() * 2 - 1) * randPercent; // -1 ~ 1 * random
+                let radius = baseSize * (1 + variation * 0.5); // +/- 50% variation
+                radius = Math.max(0.2, radius); // 最小限制
+
+                // Physics Body
                 const body = new CANNON.Body({
-                    mass: 1,
+                    mass: 1, // 統一質量，或者可以設 radius * 10
                     material: ballMaterial,
-                    linearDamping: 0.3, // 阻尼，避免永遠停不下來
+                    linearDamping: 0.3,
                     angularDamping: 0.3
                 });
+                body.addShape(new CANNON.Sphere(radius));
                 
-                // 隨機位置 (在箱子內)
+                // 隨機位置 (避免卡牆)
+                const rangeX = getVisibleSize().width / 2 - 1;
+                const rangeY = getVisibleSize().height / 2 - 1;
                 body.position.set(
-                    (Math.random() - 0.5) * 5,
-                    (Math.random() - 0.5) * 10,
-                    (Math.random() - 0.5) * 2 // Z軸隨機
+                    (Math.random()-0.5) * rangeX,
+                    (Math.random()-0.5) * rangeY,
+                    (Math.random()-0.5) * 1 // Z軸淺淺的隨機
                 );
-                world.addBody(body);
-                balls.push(body);
-
-                // 監聽碰撞播放聲音
-                body.addEventListener("collide", (e) => {
-                    // 取得相對撞擊速度
-                    const relativeVelocity = e.contact.getImpactVelocityAlongNormal();
-                    if(Math.abs(relativeVelocity) > 2) {
-                        playChime(Math.abs(relativeVelocity));
+                
+                // 碰撞監聽 (特效+音效)
+                body.addEventListener('collide', (e) => {
+                    const v = e.contact.getImpactVelocityAlongNormal();
+                    if(Math.abs(v) > 3) {
+                        playClink(Math.abs(v));
+                        // 噴粒子：轉換 Cannon Vec3 到 Three Vec3
+                        const contactPos = new THREE.Vector3(
+                            body.position.x, 
+                            body.position.y, 
+                            body.position.z
+                        );
+                        // 只有夠大力才噴，避免效能問題
+                        if(Math.abs(v) > 5) spawnParticles(contactPos, 3);
                     }
                 });
 
-                // 網格 (Mesh)
-                const material = baseMaterial.clone();
-                material.color.setHex(ballColors[Math.floor(Math.random() * ballColors.length)]);
-                const mesh = new THREE.Mesh(geometry, material);
+                world.addBody(body);
+                balls.push(body);
+
+                // Three Mesh
+                const mat = new THREE.MeshStandardMaterial({
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    roughness: 0.2,
+                    metalness: 0.1
+                });
+                const mesh = new THREE.Mesh(ballGeo, mat);
+                mesh.scale.set(radius, radius, radius);
                 mesh.castShadow = true;
-                mesh.receiveShadow = true;
                 scene.add(mesh);
                 ballMeshes.push(mesh);
             }
         }
 
-        // --- 6. 互動控制 (重力 + 搖晃) ---
+
+        // --- 5. 互動邏輯 ---
+        const gravitySlider = document.getElementById('input-gravity');
         let lastAcc = {x:0, y:0, z:0};
-        
+        let shakeCooldown = false;
+        const fxText = document.getElementById('fx-text');
+
         function handleOrientation(e) {
-            // 映射 DeviceOrientation 到 3D 重力向量
-            // 手機直立：Y = -9.8
-            // 手機右傾：X = 9.8
-            // 手機平放：Z = -9.8 (背面朝下)
+            const gVal = parseFloat(gravitySlider.value); // 0 ~ 20
+            if(e.gamma == null) return;
             
-            // 這裡我們主要控制 X 和 Y，Z 軸稍微給一點傾向背面，讓球貼著背板比較好看
-            // 或者讓 Z 軸也隨手機傾斜改變，實現真實 3D 滾動
-            
-            const g = 9.82;
-            const gamma = e.gamma || 0; // 左-90 ~ 右90
-            const beta = e.beta || 0;   // 後-180 ~ 前180
+            // 轉換角度為重力向量
+            // X: gamma (左右), Y: beta (前後), Z: 傾向於 -5 讓球貼背
+            const radX = (e.gamma || 0) * Math.PI / 180;
+            const radY = (e.beta || 0) * Math.PI / 180;
 
-            // 簡單的三角函數轉換 (近似值)
-            const radX = beta * Math.PI / 180;
-            const radY = gamma * Math.PI / 180;
-
-            // 計算重力向量
             world.gravity.set(
-                Math.sin(radY) * g * 2, // X 加強一點
-                Math.sin(radX) * -g * 2, // Y 加強一點 (注意 Canvas Y軸向上，但物理向下)
-                -5 // 給一個恆定的 Z 軸重力，傾向於讓球靠向「背板」或「螢幕」? 
-                   // 設為 0 讓它完全自由，或 -2 讓它稍微向後靠
+                Math.sin(radX) * gVal,
+                Math.sin(radY) * -gVal, // 注意 Canvas Y 向上
+                -2 // Z軸給一點點重力向後，讓球不要一直貼著玻璃(鏡頭)
             );
         }
 
         function handleMotion(e) {
             const acc = e.accelerationIncludingGravity || e.acceleration;
             if(!acc) return;
-
+            
             const dx = acc.x - lastAcc.x;
             const dy = acc.y - lastAcc.y;
             const dz = acc.z - lastAcc.z;
-            const totalDelta = Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
+            const total = Math.abs(dx)+Math.abs(dy)+Math.abs(dz);
 
-            // 搖晃偵測
-            if (totalDelta > 20) {
-                // 施加隨機衝量 (爆炸效果)
-                balls.forEach(body => {
-                    const force = 10;
-                    body.applyImpulse(
-                        new CANNON.Vec3(
-                            (Math.random()-0.5) * force,
-                            (Math.random()-0.5) * force,
-                            (Math.random()-0.5) * force * 0.5 // Z軸力道小一點
-                        ),
-                        body.position
-                    );
+            // Shake
+            if(!shakeCooldown && total > 20) {
+                shakeCooldown = true;
+                fxText.style.opacity = 1;
+                fxText.style.transform = `translate(-50%, -50%) rotate(${Math.random()*30-15}deg)`;
+                setTimeout(()=>fxText.style.opacity=0, 300);
+                setTimeout(()=>shakeCooldown=false, 300);
+
+                playSwoosh();
+                if(navigator.vibrate) navigator.vibrate(150);
+
+                // 炸開
+                balls.forEach(b => {
+                    b.applyImpulse(new CANNON.Vec3(
+                        (Math.random()-0.5)*10,
+                        (Math.random()-0.5)*10,
+                        (Math.random()-0.5)*5
+                    ), b.position);
                 });
-                
-                // 震動
-                if(navigator.vibrate) navigator.vibrate(100);
             }
             lastAcc = {x:acc.x, y:acc.y, z:acc.z};
         }
 
+        // --- UI 更新 ---
+        const inputs = {
+            count: document.getElementById('input-count'),
+            size: document.getElementById('input-size'),
+            random: document.getElementById('input-random'),
+            gravity: document.getElementById('input-gravity')
+        };
+        const spans = {
+            count: document.getElementById('val-count'),
+            size: document.getElementById('val-size'),
+            random: document.getElementById('val-random'),
+            gravity: document.getElementById('val-gravity')
+        };
 
-        // --- 7. 渲染循環 ---
-        const timeStep = 1 / 60;
+        function onUIChange(k) {
+            spans[k].innerText = inputs[k].value;
+            if(k !== 'gravity') {
+                clearTimeout(window.rebuildTimer);
+                window.rebuildTimer = setTimeout(rebuildBalls, 100);
+            }
+        }
+        Object.keys(inputs).forEach(k => inputs[k].addEventListener('input', () => onUIChange(k)));
+
+        document.getElementById('toggle-btn').addEventListener('click', () => {
+            document.getElementById('control-panel').classList.toggle('collapsed');
+        });
+
+        // --- 渲染 Loop ---
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1); // 限制最大 dt 避免切換分頁後爆炸
 
-            const dt = clock.getDelta();
-            
-            // 更新物理世界
-            world.step(timeStep, dt, 3);
+            world.step(1/60, dt, 3);
 
-            // 同步物理位置到視覺網格
-            for (let i = 0; i < balls.length; i++) {
+            // 同步位置
+            for(let i=0; i<balls.length; i++) {
                 ballMeshes[i].position.copy(balls[i].position);
                 ballMeshes[i].quaternion.copy(balls[i].quaternion);
             }
 
+            // 更新粒子
+            updateParticles(dt);
+
             renderer.render(scene, camera);
         }
 
-        // --- 啟動邏輯 ---
-        const startBtn = document.getElementById('start-btn');
-        const uiLayer = document.getElementById('ui-layer');
-
+        // --- 啟動 ---
         function start() {
-            uiLayer.style.display = 'none';
+            document.getElementById('start-overlay').style.display = 'none';
             
-            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                updateWalls(); // 重要：視窗改變時牆壁要跟著變
+            });
             window.addEventListener('deviceorientation', handleOrientation);
             window.addEventListener('devicemotion', handleMotion);
 
-            createWalls(); // 根據螢幕建立邊界
-            createBalls();
+            updateWalls();
+            rebuildBalls();
             animate();
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            createWalls(); // 視窗變動時重建牆壁
-        }
-
-        startBtn.addEventListener('click', () => {
+        document.getElementById('start-btn').addEventListener('click', () => {
             initAudio();
             if(audioCtx.state === 'suspended') audioCtx.resume();
-
+            
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(r => { if(r === 'granted') start(); })
-                    .catch(e => start());
+                DeviceOrientationEvent.requestPermission().then(r => { if(r==='granted') start(); }).catch(e => start());
             } else {
                 start();
             }
