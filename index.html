@@ -3,298 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>液體模擬 - 掌中水杯</title>
+    <title>互動水流聲效版</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000;
+            background: #020205; /* 深海黑 */
             touch-action: none;
             font-family: 'Segoe UI', sans-serif;
         }
 
-        /* 這是液體效果的核心：容器 */
-        #fluid-container {
+        /* 背景動態光影 */
+        #bg-gradient {
             position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
-            /* 關鍵濾鏡：先模糊，再加強對比，讓模糊邊緣變銳利，產生沾黏感 */
-            filter: url('#goo'); 
-            background: transparent;
-            z-index: 2;
+            background: radial-gradient(circle at 50% 30%, #1a2a6c, #000000 80%);
+            z-index: 0;
         }
 
+        /* 畫布層 */
         canvas {
             display: block;
-        }
-
-        /* 背景裝飾 - 模擬玻璃杯後的深海光影 */
-        #background-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at center, #1a2a6c, #b21f1f, #fdbb2d); /* 預設備用 */
-            background: linear-gradient(180deg, #050505 0%, #0a1525 100%);
             z-index: 1;
+            /* 關鍵：濾鏡讓漸層球融合 */
+            filter: url('#water-filter'); 
         }
 
-        /* 模擬玻璃反光 */
-        #glass-reflection {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.05) 100%);
-            pointer-events: none;
-            z-index: 10;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
+        /* UI 層 */
         #ui-layer {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            z-index: 20;
+            z-index: 10;
             pointer-events: none;
-            color: rgba(255, 255, 255, 0.6);
         }
 
         #start-btn {
-            margin-top: 20px;
-            padding: 15px 40px;
-            font-size: 18px;
-            background: rgba(0, 200, 255, 0.2);
-            color: #00ffff;
-            border: 1px solid #00ffff;
-            border-radius: 30px;
+            padding: 16px 40px;
+            font-size: 20px;
+            color: #fff;
+            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 0 20px rgba(0, 198, 255, 0.5);
             cursor: pointer;
             pointer-events: auto;
-            display: none;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-            transition: 0.3s;
+            transition: transform 0.1s;
+            font-weight: bold;
+            letter-spacing: 1px;
         }
-        #start-btn:hover {
-            background: rgba(0, 200, 255, 0.4);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+        #start-btn:active {
+            transform: scale(0.95);
         }
 
+        .status-text {
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="background-layer"></div>
-    <div id="glass-reflection"></div>
+    <div id="bg-gradient"></div>
 
     <div id="ui-layer">
-        <h2 id="status">液體填充中...</h2>
-        <button id="start-btn">注入液體 (啟動感測器)</button>
+        <div id="status" class="status-text">準備就緒</div>
+        <button id="start-btn">開啟水流 (聲音+感測)</button>
     </div>
 
-    <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <svg style="position: absolute; width:0; height:0;">
         <defs>
-            <filter id="goo">
+            <filter id="water-filter">
                 <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
-                <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+                <feColorMatrix in="blur" mode="matrix" values="
+                    1 0 0 0 0
+                    0 1 0 0 0
+                    0 0 1 0 0
+                    0 0 0 25 -9" result="water" />
+                <feComposite in="SourceGraphic" in2="water" operator="atop"/>
             </filter>
         </defs>
     </svg>
 
-    <div id="fluid-container">
-        <canvas id="world"></canvas>
-    </div>
+    <canvas id="world"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
     <script>
-        window.addEventListener('load', init);
+        // --- 1. 初始化設定 ---
+        const canvas = document.getElementById('world');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const uiLayer = document.getElementById('ui-layer');
 
-        function init() {
-            const Engine = Matter.Engine,
-                  Render = Matter.Render,
-                  Runner = Matter.Runner,
-                  Composites = Matter.Composites,
-                  Common = Matter.Common,
-                  MouseConstraint = Matter.MouseConstraint,
-                  Mouse = Matter.Mouse,
-                  World = Matter.World,
-                  Bodies = Matter.Bodies,
-                  Body = Matter.Body;
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
 
-            // 1. 建立引擎
-            const engine = Engine.create();
-            const world = engine.world;
+        // --- 2. Matter.js 物理引擎 ---
+        const Engine = Matter.Engine,
+              World = Matter.World,
+              Bodies = Matter.Bodies,
+              Composite = Matter.Composite;
 
-            // 2. 建立渲染器 (自定義渲染以獲得液體顏色)
-            const container = document.getElementById('fluid-container');
-            const canvas = document.getElementById('world');
-            
-            // 設定 Canvas 大小
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        const engine = Engine.create();
+        const world = engine.world;
+        
+        // 建立邊界
+        const walls = [];
+        const wallThickness = 200;
+        function createWalls() {
+            Composite.clear(world, false, true); // 清除舊牆壁但保留球
+            // 重新加入球 (Matter.js 的 clear 有點暴力，我們手動處理牆壁比較好，這裡簡化直接重建邊界)
+            // 實際上我們只更新牆壁位置
+            World.remove(world, walls);
+            walls.length = 0;
 
-            // 使用 Matter.Render 作為基礎，但我們會修改樣式
-            const render = Render.create({
-                element: container,
-                canvas: canvas,
-                engine: engine,
-                options: {
-                    width: window.innerWidth,
-                    height: window.innerHeight,
-                    background: 'transparent', // 透明背景
-                    wireframes: false, // 關閉線框模式
-                    showAngleIndicator: false
-                }
-            });
-
-            // 3. 添加牆壁 (邊界)
-            // 為了讓水看起來像在全螢幕玻璃杯裡，牆壁要貼齊螢幕邊緣
-            let walls = [];
-            function createWalls() {
-                World.remove(world, walls); // 移除舊牆壁
-                const thickness = 100; 
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-                
-                walls = [
-                    Bodies.rectangle(width/2, -thickness/2, width, thickness, { isStatic: true, render: { visible: false } }), // 上
-                    Bodies.rectangle(width/2, height + thickness/2, width, thickness, { isStatic: true, render: { visible: false } }), // 下
-                    Bodies.rectangle(width + thickness/2, height/2, thickness, height, { isStatic: true, render: { visible: false } }), // 右
-                    Bodies.rectangle(-thickness/2, height/2, thickness, height, { isStatic: true, render: { visible: false } }) // 左
-                ];
-                World.add(world, walls);
-            }
-            createWalls();
-
-            // 4. 生成「液體」粒子
-            // 使用堆疊 (Stack) 生成大量小球
-            const particleSize = 10; // 粒子大小 (配合 SVG 濾鏡調整)
-            const cols = 15; 
-            const rows = 15;
-            
-            const fluid = Composites.stack(
-                window.innerWidth / 2 - 100, // 起始 X
-                window.innerHeight / 2 - 100, // 起始 Y
-                cols, rows, // 行列數
-                0, 0, // 間距
-                function(x, y) {
-                    return Bodies.circle(x, y, particleSize, {
-                        friction: 0.005,
-                        restitution: 0.5, // 稍微有點彈性
-                        density: 0.04,
-                        render: {
-                            // 液體顏色：這裡是關鍵
-                            // 為了配合濾鏡，我們用亮藍色/青色
-                            fillStyle: '#00eaff', 
-                            strokeStyle: 'transparent'
-                        }
-                    });
-                }
+            const opts = { isStatic: true, render: { visible: false } };
+            walls.push(
+                Bodies.rectangle(width/2, -wallThickness, width, wallThickness, opts), // 上
+                Bodies.rectangle(width/2, height+wallThickness, width, wallThickness, opts), // 下
+                Bodies.rectangle(width+wallThickness, height/2, wallThickness, height, opts), // 右
+                Bodies.rectangle(-wallThickness, height/2, wallThickness, height, opts) // 左
             );
-            World.add(world, fluid);
+            World.add(world, walls);
+        }
+        createWalls();
 
-            // 5. 啟動引擎
-            Render.run(render);
-            const runner = Runner.create();
-            Runner.run(runner, engine);
-
-            // 6. 陀螺儀控制 (核心邏輯)
-            const startBtn = document.getElementById('start-btn');
-            const statusText = document.getElementById('status');
-
-            // 處理視窗縮放
-            window.addEventListener('resize', () => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                render.canvas.width = window.innerWidth;
-                render.canvas.height = window.innerHeight;
-                createWalls();
+        // 生成液體粒子
+        const particles = [];
+        const particleCount = 300; // 300 顆是效能與效果的平衡點
+        const size = 12; // 粒子半徑
+        
+        for(let i=0; i<particleCount; i++) {
+            const x = Math.random() * width;
+            const y = Math.random() * height/2 + height/2;
+            const p = Bodies.circle(x, y, size, {
+                friction: 0.001,
+                restitution: 0.5,
+                density: 0.04,
+                frictionAir: 0.02
             });
+            particles.push(p);
+        }
+        World.add(world, particles);
 
-            // 授權與開始
+        // --- 3. 自定義渲染 (這是畫面變漂亮的關鍵) ---
+        // 我們不使用 Matter.Render，而是自己用 Canvas API 畫，這樣才能畫出「漸層球」
+        function renderLoop() {
+            Engine.update(engine, 1000 / 60);
+            
+            // 清除畫布
+            ctx.clearRect(0, 0, width, height);
+
+            // 繪製每一顆粒子
+            ctx.globalCompositeOperation = 'source-over';
+            
+            for(let i=0; i<particles.length; i++) {
+                const p = particles[i];
+                const x = p.position.x;
+                const y = p.position.y;
+
+                // 建立徑向漸層：中心亮藍 -> 邊緣透明
+                // 這會讓粒子看起來像發光的光點，疊加後會變得很亮
+                const grad = ctx.createRadialGradient(x, y, size * 0.2, x, y, size * 1.2);
+                grad.addColorStop(0, 'rgba(100, 255, 255, 1)');   // 核心亮白
+                grad.addColorStop(0.5, 'rgba(0, 150, 255, 0.8)'); // 中間藍
+                grad.addColorStop(1, 'rgba(0, 50, 255, 0)');      // 邊緣透明
+
+                ctx.beginPath();
+                ctx.arc(x, y, size * 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+            }
+            
+            // 更新音效
+            updateAudio();
+
+            requestAnimationFrame(renderLoop);
+        }
+
+        // --- 4. Web Audio API 音效系統 (合成水聲) ---
+        let audioCtx;
+        let noiseNode;
+        let gainNode;
+        let filterNode;
+        let audioInitialized = false;
+
+        function initAudio() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            // 1. 建立白噪音緩衝區
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            // 2. 建立節點
+            noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = buffer;
+            noiseNode.loop = true;
+
+            // 低通濾波器 (讓白噪音聽起來悶悶的像水聲)
+            filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = 'lowpass';
+            filterNode.frequency.value = 400; // 初始頻率
+
+            // 音量控制
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0; // 初始靜音
+
+            // 連接：噪音 -> 濾波 -> 音量 -> 輸出
+            noiseNode.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            noiseNode.start(0);
+            audioInitialized = true;
+        }
+
+        // 根據粒子速度動態調整聲音
+        function updateAudio() {
+            if(!audioInitialized) return;
+
+            // 計算所有粒子的平均速度
+            let totalSpeed = 0;
+            // 為了效能，只抽樣前 50 顆
+            const sampleSize = Math.min(particles.length, 50);
+            for(let i=0; i<sampleSize; i++) {
+                totalSpeed += particles[i].speed;
+            }
+            const avgSpeed = totalSpeed / sampleSize;
+
+            // 映射速度到音量和頻率
+            // 速度越快 -> 音量越大，聲音越清脆(頻率變高)
+            const targetGain = Math.min(avgSpeed * 0.1, 0.5); // 最大音量 0.5
+            const targetFreq = 200 + (avgSpeed * 100); // 頻率 200Hz ~ 
+
+            // 平滑過渡
+            gainNode.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.1);
+            filterNode.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.1);
+        }
+
+        // --- 5. 互動控制 ---
+        startBtn.addEventListener('click', () => {
+            // 啟動音效 context (瀏覽器要求必須在點擊事件中啟動)
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            // 請求陀螺儀權限
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                statusText.innerText = "準備就緒";
-                startBtn.style.display = 'inline-block';
-                
-                startBtn.addEventListener('click', () => {
-                    DeviceOrientationEvent.requestPermission()
+                DeviceOrientationEvent.requestPermission()
                     .then(response => {
-                        if (response == 'granted') {
+                        if (response === 'granted') {
                             window.addEventListener('deviceorientation', handleOrientation);
-                            startBtn.style.display = 'none';
-                            statusText.style.display = 'none'; // 隱藏文字，沉浸體驗
+                            startGame();
+                        } else {
+                            alert('需要權限才能體驗完整功能');
                         }
                     })
                     .catch(console.error);
-                });
             } else {
-                statusText.innerText = "請晃動設備";
+                // Android / PC
                 window.addEventListener('deviceorientation', handleOrientation);
-                // 自動隱藏UI
-                setTimeout(() => {
-                    startBtn.style.display = 'none';
-                    statusText.style.display = 'none';
-                }, 2000);
+                startGame();
             }
+        });
 
-            // 重力映射函式
-            function handleOrientation(event) {
-                const gamma = event.gamma; // 左右傾斜 (-90 ~ 90)
-                const beta = event.beta;   // 前後傾斜 (-180 ~ 180)
-
-                if (gamma === null || beta === null) return;
-
-                // --- 重力計算邏輯 ---
-                // 目標：模擬直立拿著手機。
-                // 當手機直立時 (Beta ~90)，重力應該向下 (Y = 1)。
-                // 當手機向右倒 (Gamma > 0)，重力向右 (X > 0)。
-                
-                // 限制重力最大值，避免移動過快
-                const gravityScale = 1;
-
-                // X 軸重力直接對應 Gamma (左右傾斜)
-                // 這裡除以 90 是為了歸一化到 -1 ~ 1
-                let gravityX = Math.min(Math.max(gamma / 45, -1), 1);
-
-                // Y 軸重力對應 Beta。
-                // 直立時 Beta=90 -> Gravity Y=1 (向下)
-                // 平放時 Beta=0  -> Gravity Y=0
-                // 倒立時 Beta=-90 -> Gravity Y=-1 (向上)
-                // 我們主要希望它在直立附近運作，所以用 sin 函數或線性映射
-                
-                // 簡單映射：假設使用者主要在 45~135 度之間操作
-                // (Beta - 90) / 90 
-                // 但為了簡單，我們直接讓 Beta 控制 Y 軸
-                // 注意：Matter.js 的 Y 往下是正
-                let gravityY = Math.min(Math.max(beta / 45, -1), 1); 
-
-                // 如果是 Android，座標系可能相反，這裡預設 iOS/Standard Web
-                // 如果覺得方向反了，可以在這裡加負號
-                
-                engine.gravity.x = gravityX * gravityScale;
-                engine.gravity.y = gravityY * gravityScale;
-            }
-            
-            // 加入滑鼠/觸控互動 (可以用手攪動水)
-            const mouse = Mouse.create(render.canvas);
-            const mouseConstraint = MouseConstraint.create(engine, {
-                mouse: mouse,
-                constraint: {
-                    stiffness: 0.2,
-                    render: { visible: false }
-                }
-            });
-            World.add(world, mouseConstraint);
-            render.mouse = mouse; // 讓滑鼠座標同步
+        function startGame() {
+            uiLayer.style.display = 'none'; // 隱藏按鈕
+            renderLoop(); // 開始渲染迴圈
         }
+
+        // 陀螺儀邏輯 (與上一版相同，針對直立優化)
+        function handleOrientation(event) {
+            const gamma = event.gamma; // 左右
+            const beta = event.beta;   // 前後
+            
+            if (gamma === null || beta === null) return;
+
+            // 限制與平滑重力
+            let gx = Math.min(Math.max(gamma / 45, -1), 1);
+            let gy = Math.min(Math.max(beta / 45, -1), 1);
+
+            engine.gravity.x = gx;
+            engine.gravity.y = gy;
+        }
+        
+        // 視窗縮放處理
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            createWalls();
+        });
+        
+        // 讓電腦版也可以用滑鼠拖曳水
+        const MouseConstraint = Matter.MouseConstraint, Mouse = Matter.Mouse;
+        const mouseConstraint = MouseConstraint.create(engine, {
+            mouse: Mouse.create(canvas),
+            constraint: { stiffness: 0.2, render: { visible: false } }
+        });
+        World.add(world, mouseConstraint);
+
     </script>
 </body>
 </html>
