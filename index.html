@@ -3,86 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>深海球池 - 飽滿版</title>
+    <title>深海球池 - 開發者模式</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364); /* 深海藍綠色調 */
+            background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
             touch-action: none;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', sans-serif;
         }
 
-        canvas {
-            display: block;
-        }
+        canvas { display: block; }
 
-        #ui-layer {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            pointer-events: none;
+        /* --- 控制面板樣式 --- */
+        #control-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            box-sizing: border-box;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
         }
 
-        #start-btn {
-            padding: 20px 50px;
-            font-size: 22px;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(135deg, #00c6ff, #0072ff);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50px;
+        #control-panel.collapsed {
+            transform: translateY(-100%);
+        }
+
+        /* 展開/收合按鈕 */
+        #toggle-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 101;
+            background: #00c6ff;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
             cursor: pointer;
-            pointer-events: auto;
-            box-shadow: 0 10px 20px rgba(0, 114, 255, 0.4);
-            transition: transform 0.1s;
-        }
-        #start-btn:active {
-            transform: scale(0.95);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        #shake-feedback {
-            position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 40px;
-            font-weight: 900;
-            color: #ffeb3b;
-            opacity: 0;
-            transition: opacity 0.1s;
-            pointer-events: none;
-            text-shadow: 0 0 20px orange;
-            z-index: 5;
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .control-group label {
+            width: 80px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .control-group input {
+            flex: 1;
+            margin: 0 10px;
+        }
+        .control-group span {
+            width: 30px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: bold;
+            color: #00c6ff;
         }
 
-        /* 閃光特效層 */
-        #flash-overlay {
-            position: absolute;
+        #start-overlay {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: white;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            flex-direction: column;
+        }
+
+        #start-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            border: none;
+            color: white;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        #shake-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 50px;
+            font-weight: 900;
+            color: #ffeb3b;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.1s;
-            z-index: 1;
+            text-shadow: 0 0 30px orange;
+            z-index: 50;
+            transition: opacity 0.2s;
         }
     </style>
 </head>
 <body>
 
-    <div id="flash-overlay"></div>
-    <div id="shake-feedback">SHAKE!!!</div>
+    <div id="start-overlay">
+        <button id="start-btn">開始調校 (START)</button>
+        <p style="color:#666; margin-top:10px;">請允許感測器權限</p>
+    </div>
 
-    <div id="ui-layer">
-        <button id="start-btn">進入球池 (START)</button>
-        <p style="color: #aaa; margin-top: 10px;">請鎖定直向螢幕遊玩</p>
+    <div id="shake-feedback">SHAKE!</div>
+
+    <button id="toggle-btn">⚙️</button>
+
+    <div id="control-panel">
+        <div class="control-group">
+            <label>球球數量</label>
+            <input type="range" id="input-count" min="10" max="400" value="120" step="10">
+            <span id="val-count">120</span>
+        </div>
+        <div class="control-group">
+            <label>球球大小</label>
+            <input type="range" id="input-size" min="5" max="40" value="18" step="1">
+            <span id="val-size">18</span>
+        </div>
+        <div class="control-group">
+            <label>搖晃力道</label>
+            <input type="range" id="input-shake" min="5" max="50" value="15" step="1">
+            <span id="val-shake">15</span>
+        </div>
+        <div style="text-align: center; font-size: 12px; color: #666;">
+            數值越小越容易觸發搖晃
+        </div>
     </div>
 
     <canvas id="world"></canvas>
@@ -90,19 +151,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
     <script>
+        // --- 變數與設定 ---
         const canvas = document.getElementById('world');
         const ctx = canvas.getContext('2d');
-        const startBtn = document.getElementById('start-btn');
-        const uiLayer = document.getElementById('ui-layer');
-        const shakeText = document.getElementById('shake-feedback');
-        const flashOverlay = document.getElementById('flash-overlay');
-
         let width = window.innerWidth;
         let height = window.innerHeight;
         canvas.width = width;
         canvas.height = height;
 
-        // --- Matter.js ---
+        // 預設參數
+        let config = {
+            count: 120,
+            radius: 18,
+            shakeThreshold: 15
+        };
+
+        // Matter.js 模組
         const Engine = Matter.Engine,
               World = Matter.World,
               Bodies = Matter.Bodies,
@@ -111,53 +175,45 @@
 
         const engine = Engine.create();
         const world = engine.world;
+        let balls = [];
+        let walls = [];
         
-        const walls = {}; // 儲存牆壁物件以便更新
-        const balls = [];
-        
-        // 鮮豔的顏色，讓大球看起來像糖果或寶石
         const colors = ['#FF0055', '#00FFCC', '#FFFF00', '#00CCFF', '#AA00FF', '#FF9900'];
 
-        // --- 1. 牆壁管理 (修正邊界問題) ---
-        function createOrUpdateWalls() {
-            const wallThick = 200; // 牆壁厚度
-            const w = window.innerWidth;
-            const h = window.innerHeight;
+        // --- 核心功能 ---
 
-            // 如果牆壁還沒建立，就建立
-            if (!walls.top) {
-                const opts = { isStatic: true, render: { visible: false } };
-                walls.top = Bodies.rectangle(w/2, -wallThick/2, w + 200, wallThick, opts);
-                walls.bottom = Bodies.rectangle(w/2, h + wallThick/2, w + 200, wallThick, opts);
-                walls.left = Bodies.rectangle(-wallThick/2, h/2, wallThick, h + 200, opts);
-                walls.right = Bodies.rectangle(w + wallThick/2, h/2, wallThick, h + 200, opts);
-                World.add(world, [walls.top, walls.bottom, walls.left, walls.right]);
-            } else {
-                // 如果已經存在，就更新位置與大小 (解決邊界跑掉的問題)
-                Body.setPosition(walls.top, { x: w/2, y: -wallThick/2 });
-                Body.setPosition(walls.bottom, { x: w/2, y: h + wallThick/2 });
-                Body.setPosition(walls.left, { x: -wallThick/2, y: h/2 });
-                Body.setPosition(walls.right, { x: w + wallThick/2, y: h/2 });
-                
-                // 這裡簡化處理，通常牆壁變長需要重新建立 Body，但移動位置通常足夠
-                // 如果螢幕旋轉導致寬高大幅改變，建議重新整理，但這裡我們盡量適配
-            }
+        // 1. 建立/重建 牆壁
+        function createWalls() {
+            World.remove(world, walls);
+            walls = [];
+            const thick = 200;
+            const opts = { isStatic: true, render: { visible: false } };
+            
+            walls.push(
+                Bodies.rectangle(width/2, -thick/2, width+200, thick, opts), // 上
+                Bodies.rectangle(width/2, height+thick/2, width+200, thick, opts), // 下
+                Bodies.rectangle(-thick/2, height/2, thick, height+200, opts), // 左
+                Bodies.rectangle(width+thick/2, height/2, thick, height+200, opts) // 右
+            );
+            World.add(world, walls);
         }
 
-        // --- 2. 建立飽滿的大球 ---
-        function initBalls() {
-            const ballCount = 200; // 數量減少，但體積變大
-            
-            for(let i = 0; i < ballCount; i++) {
-                const radius = Math.random() * 10 + 15; // 半徑 15~25 (直徑 30~50px) -> 很大顆！
+        // 2. 重建球體 (當數量或大小改變時)
+        function rebuildBalls() {
+            // 清除現有球體
+            World.remove(world, balls);
+            balls = [];
+
+            for(let i = 0; i < config.count; i++) {
+                // 隨機大小變異 (+- 20%)
+                const r = config.radius * (0.8 + Math.random() * 0.4);
                 const x = Math.random() * (width - 100) + 50;
-                const y = Math.random() * (height / 2); // 先生成在上半部避免卡牆
-                
-                const ball = Bodies.circle(x, y, radius, {
-                    restitution: 0.7, // 彈力 (0~1)，越高越彈
+                const y = Math.random() * (height / 2); // 上半部生成
+
+                const ball = Bodies.circle(x, y, r, {
+                    restitution: 0.7,
                     friction: 0.005,
-                    frictionAir: 0.01, 
-                    density: 0.05,
+                    frictionAir: 0.01,
                     render: {
                         fillStyle: colors[Math.floor(Math.random() * colors.length)]
                     }
@@ -167,146 +223,156 @@
             World.add(world, balls);
         }
 
-        // --- 3. 背景裝飾氣泡 ---
-        const bubbles = [];
-        function initBubbles() {
-            for(let i=0; i<40; i++) {
-                bubbles.push({
-                    x: Math.random() * width,
-                    y: Math.random() * height,
-                    r: Math.random() * 5 + 2,
-                    s: Math.random() * 2 + 0.5
-                });
-            }
-        }
+        // 3. 渲染迴圈
+        // 背景氣泡
+        const bubbles = Array.from({length: 40}, () => ({
+            x: Math.random()*width, y: Math.random()*height, r: Math.random()*5+1, s: Math.random()+0.5
+        }));
 
-        // --- 4. 渲染循環 ---
         function render() {
             Engine.update(engine, 1000 / 60);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, width, height);
 
-            // A. 畫背景氣泡 (向上飄)
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            // 畫背景氣泡
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
             bubbles.forEach(b => {
                 b.y -= b.s;
-                if (b.y < 0) b.y = height;
+                if(b.y < 0) b.y = height;
                 ctx.beginPath();
                 ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
                 ctx.fill();
             });
 
-            // B. 畫物理球
-            for(let i = 0; i < balls.length; i++) {
-                const b = balls[i];
+            // 畫物理球
+            balls.forEach(b => {
                 ctx.beginPath();
-                ctx.arc(b.position.x, b.position.y, b.circleRadius, 0, Math.PI * 2);
-                
-                // 畫實心色
+                ctx.arc(b.position.x, b.position.y, b.circleRadius, 0, Math.PI*2);
                 ctx.fillStyle = b.render.fillStyle;
                 ctx.fill();
-
-                // 畫個簡單的高光 (讓它看起來立體一點)
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                
+                // 高光
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
                 ctx.beginPath();
                 ctx.arc(b.position.x - b.circleRadius*0.3, b.position.y - b.circleRadius*0.3, b.circleRadius/3, 0, Math.PI*2);
                 ctx.fill();
-            }
+            });
 
             requestAnimationFrame(render);
         }
 
-        // --- 5. 搖晃偵測 (Shake Logic) ---
+        // --- UI 控制邏輯 ---
+        const panel = document.getElementById('control-panel');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const inpCount = document.getElementById('input-count');
+        const inpSize = document.getElementById('input-size');
+        const inpShake = document.getElementById('input-shake');
+        const valCount = document.getElementById('val-count');
+        const valSize = document.getElementById('val-size');
+        const valShake = document.getElementById('val-shake');
+
+        // 收合/展開
+        toggleBtn.addEventListener('click', () => {
+            panel.classList.toggle('collapsed');
+            toggleBtn.innerText = panel.classList.contains('collapsed') ? '🛠️' : '🔼';
+        });
+
+        // Debounce 防抖動：拖曳滑桿時不要瘋狂重算，停下來才算
+        let timeout;
+        function updateConfig() {
+            valCount.innerText = inpCount.value;
+            valSize.innerText = inpSize.value;
+            valShake.innerText = inpShake.value;
+
+            config.shakeThreshold = parseInt(inpShake.value);
+            
+            // 只有數量或大小改變時才重建物理世界
+            const newCount = parseInt(inpCount.value);
+            const newSize = parseInt(inpSize.value);
+            
+            if (newCount !== config.count || newSize !== config.radius) {
+                config.count = newCount;
+                config.radius = newSize;
+                
+                clearTimeout(timeout);
+                timeout = setTimeout(rebuildBalls, 200); // 停頓 0.2秒後執行
+            }
+        }
+
+        inpCount.addEventListener('input', updateConfig);
+        inpSize.addEventListener('input', updateConfig);
+        inpShake.addEventListener('input', updateConfig);
+
+
+        // --- 感測器邏輯 ---
         let lastAcc = { x:0, y:0, z:0 };
         let shakeCooldown = false;
+        const shakeFeedback = document.getElementById('shake-feedback');
 
-        function handleMotion(event) {
-            // 使用 accelerationIncludingGravity 比較通用
-            const acc = event.accelerationIncludingGravity;
-            if (!acc) return;
+        function handleMotion(e) {
+            const acc = e.accelerationIncludingGravity;
+            if(!acc) return;
+            
+            const dx = Math.abs(acc.x - lastAcc.x);
+            const dy = Math.abs(acc.y - lastAcc.y);
+            const dz = Math.abs(acc.z - lastAcc.z);
 
-            // 計算變化量 (Delta)
-            const deltaX = Math.abs(acc.x - lastAcc.x);
-            const deltaY = Math.abs(acc.y - lastAcc.y);
-            const deltaZ = Math.abs(acc.z - lastAcc.z);
+            if (!shakeCooldown && (dx + dy + dz) > config.shakeThreshold) {
+                // 觸發搖晃
+                shakeCooldown = true;
+                shakeFeedback.style.opacity = 1;
+                
+                balls.forEach(b => {
+                    Body.applyForce(b, b.position, {
+                        x: (Math.random()-0.5) * 0.2 * b.mass,
+                        y: (Math.random()-0.5) * 0.2 * b.mass
+                    });
+                });
 
-            // 門檻值：如果你的手機很難觸發，可以把 15 改成 10
-            if (!shakeCooldown && (deltaX + deltaY + deltaZ) > 15) {
-                triggerShake();
+                setTimeout(() => {
+                    shakeFeedback.style.opacity = 0;
+                    shakeCooldown = false;
+                }, 500);
             }
-
             lastAcc = { x: acc.x, y: acc.y, z: acc.z };
         }
 
-        function triggerShake() {
-            shakeCooldown = true;
-            
-            // 1. 視覺回饋
-            shakeText.style.opacity = 1;
-            flashOverlay.style.opacity = 0.3;
-            setTimeout(() => { 
-                shakeText.style.opacity = 0; 
-                flashOverlay.style.opacity = 0;
-                shakeCooldown = false; 
-            }, 500);
-
-            // 2. 物理爆炸
-            balls.forEach(b => {
-                // 給一個隨機方向的強力衝擊
-                Body.applyForce(b, b.position, {
-                    x: (Math.random() - 0.5) * 0.15 * b.mass, 
-                    y: (Math.random() - 0.5) * 0.15 * b.mass - 0.05 // 稍微偏上
-                });
-            });
-        }
-
-        // --- 6. 傾斜重力 ---
-        function handleOrientation(event) {
-            const g = event.gamma; // 左-90 ~ 右90
-            const b = event.beta;  // 後-180 ~ 前180
-            if (g === null || b === null) return;
-
-            // 限制在 -1 ~ 1
-            const gx = Math.min(Math.max(g / 45, -1), 1);
-            const gy = Math.min(Math.max(b / 45, -1), 1);
-
+        function handleOrientation(e) {
+            const gx = Math.min(Math.max(e.gamma / 45, -1), 1);
+            const gy = Math.min(Math.max(e.beta / 45, -1), 1);
             engine.gravity.x = gx;
             engine.gravity.y = gy;
         }
 
-        // --- 事件監聽與啟動 ---
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            createOrUpdateWalls();
-        });
+        // --- 啟動 ---
+        const startBtn = document.getElementById('start-btn');
+        const startOverlay = document.getElementById('start-overlay');
 
         startBtn.addEventListener('click', () => {
-            // iOS 權限
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                // iOS 通常只需要 requestPermission 一次，就會同時給 Orientation 和 Motion 權限
                 DeviceOrientationEvent.requestPermission()
                     .then(resp => {
-                        if (resp === 'granted') {
-                            setupSensors();
-                        } else {
-                            alert("無權限");
-                        }
-                    })
-                    .catch(console.error);
+                        if(resp === 'granted') initGame();
+                        else alert('需授權');
+                    });
             } else {
-                // Android
-                setupSensors();
+                initGame();
             }
         });
 
-        function setupSensors() {
+        function initGame() {
+            startOverlay.style.display = 'none';
             window.addEventListener('deviceorientation', handleOrientation);
-            window.addEventListener('devicemotion', handleMotion); // 搖晃需要這個
-            
-            uiLayer.style.display = 'none';
-            createOrUpdateWalls();
-            initBalls();
-            initBubbles();
+            window.addEventListener('devicemotion', handleMotion);
+            window.addEventListener('resize', () => {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+                createWalls();
+            });
+
+            createWalls();
+            rebuildBalls(); // 初始建立
             render();
         }
 
