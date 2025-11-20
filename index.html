@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>影音特效球池</title>
+    <title>清脆流沙混合版</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: radial-gradient(circle at center, #1a1a2e, #16213e, #0f3460);
+            background: radial-gradient(circle at center, #2b32b2, #1488cc); /* 清爽深藍 */
+            background: linear-gradient(to bottom, #323232 0%, #3f4c6b 40%, #606c88 100%); /* 質感灰藍 */
             touch-action: none;
             font-family: 'Segoe UI', sans-serif;
         }
@@ -21,14 +22,14 @@
             top: 0;
             left: 0;
             width: 100%;
-            background: rgba(15, 20, 35, 0.95);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             padding: 15px 20px;
             z-index: 100;
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
             transition: transform 0.3s ease;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+            box-shadow: 0 5px 30px rgba(0,0,0,0.2);
         }
 
         #control-panel.collapsed { transform: translateY(-100%); }
@@ -38,12 +39,12 @@
             top: 15px;
             right: 15px;
             z-index: 101;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255,255,255,0.3);
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            color: #00d2ff;
+            color: #fff;
             font-size: 20px;
             cursor: pointer;
             backdrop-filter: blur(5px);
@@ -62,8 +63,9 @@
         .control-group label {
             width: 50px;
             font-size: 12px;
-            color: #aaa;
+            color: #eee;
             font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
         .control-group input {
             flex: 1;
@@ -72,32 +74,31 @@
             height: 4px;
             border-radius: 2px;
             appearance: none;
-            background: #444;
+            background: rgba(255,255,255,0.3);
         }
         .control-group input::-webkit-slider-thumb {
             appearance: none;
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #00d2ff;
-            box-shadow: 0 0 10px rgba(0, 210, 255, 0.6);
+            background: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
         }
         .control-group span {
             width: 30px;
             text-align: right;
             font-size: 12px;
             font-weight: bold;
-            color: #00d2ff;
+            color: #fff;
         }
 
-        /* 啟動遮罩 */
         #start-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(10, 12, 20, 0.98);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -108,13 +109,14 @@
         #start-btn {
             padding: 20px 50px;
             font-size: 20px;
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
-            border: none;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.5);
             color: white;
             border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
+            backdrop-filter: blur(10px);
             font-weight: bold;
+            letter-spacing: 1px;
         }
         
         #fx-text {
@@ -124,30 +126,30 @@
             transform: translate(-50%, -50%);
             font-size: 60px;
             font-weight: 900;
-            color: #fff;
+            color: rgba(255,255,255,0.9);
             opacity: 0;
             pointer-events: none;
             z-index: 50;
             transition: opacity 0.1s;
-            text-shadow: 0 0 30px cyan;
+            text-shadow: 0 0 20px white;
         }
     </style>
 </head>
 <body>
 
     <div id="start-overlay">
-        <button id="start-btn">開啟音效與物理 (Start)</button>
-        <p style="color:#666; margin-top:20px; font-size:13px;">iOS 請解除靜音模式以聽見音效</p>
+        <button id="start-btn">START (開啟音效)</button>
+        <p style="color:#aaa; margin-top:20px; font-size:13px;">請記得開啟靜音鍵以聆聽清脆音效</p>
     </div>
 
-    <div id="fx-text">BOOM!</div>
+    <div id="fx-text">SHAKE!</div>
     <button id="toggle-btn">⚙️</button>
 
     <div id="control-panel">
         <div class="control-group">
-            <label>數量</label>
-            <input type="range" id="input-count" min="20" max="300" value="80" step="10">
-            <span id="val-count">80</span>
+            <label>彩球數</label>
+            <input type="range" id="input-count" min="20" max="200" value="60" step="10">
+            <span id="val-count">60</span>
         </div>
         <div class="control-group">
             <label>大小</label>
@@ -156,11 +158,11 @@
         </div>
         <div class="control-group">
             <label>隨機度</label>
-            <input type="range" id="input-random" min="0" max="100" value="60" step="5">
-            <span id="val-random">60</span>
+            <input type="range" id="input-random" min="0" max="100" value="50" step="5">
+            <span id="val-random">50</span>
         </div>
         <div class="control-group">
-            <label style="color:#e94560">重力</label>
+            <label>重力</label>
             <input type="range" id="input-gravity" min="0" max="10" value="4" step="0.5">
             <span id="val-gravity">4</span>
         </div>
@@ -172,7 +174,7 @@
 
     <script>
         // ==========================================
-        // 1. 音效系統 (Audio Synthesis)
+        // 1. 清脆音效系統 (High-Pitched Audio)
         // ==========================================
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
@@ -183,97 +185,95 @@
             isAudioReady = true;
         }
 
-        // 產生碰撞音效 (頻率隨大小變化，音量隨力道變化)
-        function playCollisionSound(intensity, sizeRatio) {
-            if (!isAudioReady || intensity < 2) return; // 太小聲不播
+        function playCrispCollision(intensity) {
+            if (!isAudioReady || intensity < 1.5) return;
 
+            const t = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
 
             osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
 
-            // 小球頻率高 (800Hz)，大球頻率低 (200Hz)
-            // sizeRatio: 0(小) ~ 1(大)
-            const freq = 800 - (sizeRatio * 600); 
-            osc.frequency.value = freq;
-            
-            // 音色：正弦波(咚) 或 三角波(鏘)
-            osc.type = intensity > 10 ? 'triangle' : 'sine';
+            // 關鍵：頻率調高 (1500Hz - 3500Hz)
+            // 讓聲音像玻璃珠或沙子
+            // 加入一點隨機性，讓聲音不單調
+            const baseFreq = 2000 + (Math.random() * 1000); 
+            osc.frequency.setValueAtTime(baseFreq, t);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, t + 0.1); // 頻率稍微下降
 
-            // 音量與衰減
-            const volume = Math.min(intensity * 0.05, 0.8);
-            gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.type = 'sine'; // 正弦波最乾淨
 
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.2);
+            // 音量包絡：極短的衰減 (0.05s - 0.1s)
+            // 這樣才會有 "Click" 的感覺
+            const volume = Math.min(intensity * 0.05, 0.3); // 音量不要太大
+            gainNode.gain.setValueAtTime(volume, t);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+
+            osc.start(t);
+            osc.stop(t + 0.1);
         }
 
-        // 產生搖晃音效 (白噪音 Swoosh)
-        function playShakeSound() {
+        function playSwooshSound() {
             if (!isAudioReady) return;
+            const t = audioCtx.currentTime;
             
-            const bufferSize = audioCtx.sampleRate * 0.5; // 0.5秒
+            // 白噪音產生氣流聲
+            const bufferSize = audioCtx.sampleRate * 0.3;
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1;
-            }
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
 
             const noise = audioCtx.createBufferSource();
             noise.buffer = buffer;
 
             const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(200, audioCtx.currentTime);
-            filter.frequency.linearRampToValueAtTime(1000, audioCtx.currentTime + 0.2); // 頻率掃描
+            filter.type = 'bandpass';
+            filter.Q.value = 1;
+            filter.frequency.setValueAtTime(400, t);
+            filter.frequency.linearRampToValueAtTime(1200, t + 0.3);
 
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.3);
 
             noise.connect(filter);
             filter.connect(gain);
             gain.connect(audioCtx.destination);
-            noise.start();
+            noise.start(t);
         }
 
         // ==========================================
-        // 2. 視覺特效系統 (VFX Particles)
+        // 2. 視覺特效 (White Particles)
         // ==========================================
-        let particles = [];
+        let vfxParticles = [];
         
-        function spawnParticles(x, y, color, force) {
-            // 限制粒子總數以防卡頓
-            if (particles.length > 100) particles.shift();
-
-            const count = Math.min(Math.floor(force), 5); // 根據力道決定數量
+        function spawnImpactVFX(x, y, force) {
+            const count = Math.min(Math.floor(force), 4); 
             for(let i=0; i<count; i++) {
-                particles.push({
+                vfxParticles.push({
                     x: x,
                     y: y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
                     life: 1.0,
-                    color: color,
-                    size: Math.random() * 3 + 1
+                    size: Math.random() * 4 + 1
                 });
             }
         }
 
-        function updateAndDrawParticles() {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
+        function renderVFX(ctx) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'; // 統一白色
+            for (let i = vfxParticles.length - 1; i >= 0; i--) {
+                let p = vfxParticles[i];
                 p.x += p.vx;
                 p.y += p.vy;
-                p.life -= 0.05; // 壽命遞減
+                p.life -= 0.06;
 
                 if (p.life <= 0) {
-                    particles.splice(i, 1);
+                    vfxParticles.splice(i, 1);
                 } else {
                     ctx.globalAlpha = p.life;
-                    ctx.fillStyle = p.color;
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
                     ctx.fill();
@@ -293,7 +293,6 @@
 
         const engine = Engine.create();
         const world = engine.world;
-        
         engine.gravity.scale = 0.002;
         engine.positionIterations = 8;
         engine.velocityIterations = 8;
@@ -307,49 +306,38 @@
         canvas.height = height;
 
         let balls = [];
+        let ambientParticles = []; // 實體的小白球
         let walls = [];
-        const colors = ['#e94560', '#0f3460', '#533483', '#16213e', '#00d2ff'];
+        
+        // 柔和色系
+        const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#54A0FF'];
 
         let config = {
-            count: 80,
+            count: 60,      // 彩球數量
             baseSize: 25,
-            randomness: 60, // 0-100
+            randomness: 50,
             gravity: 4
         };
 
-        // 碰撞偵測 -> 觸發 音效 + 特效
         Events.on(engine, 'collisionStart', function(event) {
             const pairs = event.pairs;
             for (let i = 0; i < pairs.length; i++) {
                 const pair = pairs[i];
                 
-                // 估算撞擊力道 (僅參考相對速度)
-                // Matter.js 沒有直接的 collision force，我們用力道變化推估
-                // 簡單解法：如果兩個物體速度差很大，就當作大力
-                // 這裡簡化：只對明顯的碰撞做反應
+                // 簡單力道估算
+                const speedSum = pair.bodyA.speed + pair.bodyB.speed;
                 
-                const bodyA = pair.bodyA;
-                const bodyB = pair.bodyB;
-                
-                // 忽略牆壁的微小摩擦
-                if (bodyA.speed + bodyB.speed > 2) {
-                    const force = Math.min((bodyA.speed + bodyB.speed), 20);
-                    
-                    // 找出碰撞點 (近似值)
-                    const contactX = (bodyA.position.x + bodyB.position.x) / 2;
-                    const contactY = (bodyA.position.y + bodyB.position.y) / 2;
-                    
-                    // 1. 播放音效 (只取其中一個球的大小來決定音調)
-                    // 如果是撞牆，B可能是牆壁(static)，沒半徑
-                    let sizeRatio = 0.5;
-                    if (bodyA.circleRadius) {
-                        // 正規化大小 (0~1)
-                        sizeRatio = (bodyA.circleRadius - 5) / 50; 
-                        // 2. 產生粒子
-                        spawnParticles(contactX, contactY, bodyA.render.fillStyle, force);
+                if (speedSum > 2) {
+                    // 播放清脆音效
+                    playCrispCollision(speedSum);
+
+                    // 生成白色特效
+                    // 只有比較大力的碰撞才噴特效，避免畫面太亂
+                    if (speedSum > 5) {
+                        const cx = (pair.bodyA.position.x + pair.bodyB.position.x) / 2;
+                        const cy = (pair.bodyA.position.y + pair.bodyB.position.y) / 2;
+                        spawnImpactVFX(cx, cy, speedSum);
                     }
-                    
-                    playCollisionSound(force, sizeRatio);
                 }
             }
         });
@@ -368,72 +356,96 @@
             World.add(world, walls);
         }
 
-        function updateGravity() {
-            engine.gravity.scale = config.gravity * 0.0005;
-        }
-
         function rebuildBalls() {
+            World.clear(world, false, true); // 清除所有物體保留牆壁? 不，Matter的clear比較難控，手動移除最好
             World.remove(world, balls);
+            World.remove(world, ambientParticles);
+            
             balls = [];
+            ambientParticles = [];
 
-            const randFactor = config.randomness / 100; // 0 ~ 1
+            const randFactor = config.randomness / 100; 
 
+            // 1. 建立主要的彩色球
             for(let i = 0; i < config.count; i++) {
-                // 隨機大小演算法
-                // baseSize * (1 - rand + random * 2 * rand)
-                // Ex: rand=0.6 -> 0.4 ~ 1.6 倍
                 const scale = (1 - randFactor) + (Math.random() * 2 * randFactor);
                 let r = config.baseSize * scale;
-                
-                // 硬限制：最小 5px
                 r = Math.max(r, 5);
 
                 const x = Math.random() * (width - r*2) + r;
-                const y = Math.random() * (height * 0.5) + 50;
+                const y = Math.random() * (height * 0.6);
 
                 const ball = Bodies.circle(x, y, r, {
                     restitution: 0.7, 
                     friction: 0.001,  
                     frictionAir: 0.005,
-                    // 質量自動計算 (M = density * area)，大球自然比較重
+                    density: 0.005,
+                    label: 'ball',
                     render: {
                         fillStyle: colors[Math.floor(Math.random() * colors.length)]
                     }
                 });
                 balls.push(ball);
             }
-            World.add(world, balls);
+
+            // 2. 建立混合的「實體白粒子」 (Ambient Physics Particles)
+            // 數量設為彩球的一半，或者固定數量
+            const ambientCount = Math.floor(config.count * 0.6); 
+            
+            for(let i = 0; i < ambientCount; i++) {
+                const r = Math.random() * 5 + 3; // 很小，3~8px
+                const x = Math.random() * (width - r*2) + r;
+                const y = Math.random() * (height * 0.6);
+
+                const p = Bodies.circle(x, y, r, {
+                    restitution: 0.9, // 很彈
+                    friction: 0,      // 很滑
+                    frictionAir: 0.02, // 稍微有點阻力，讓它有點漂浮感
+                    density: 0.001,   // 很輕
+                    label: 'particle',
+                    render: {
+                        fillStyle: 'rgba(255, 255, 255, 0.3)' // 半透明白
+                    }
+                });
+                ambientParticles.push(p);
+            }
+
+            World.add(world, [...balls, ...ambientParticles]);
         }
 
         // ==========================================
-        // 4. 渲染與主循環
+        // 4. 渲染
         // ==========================================
         function render() {
             Engine.update(engine, 1000 / 60);
             ctx.clearRect(0, 0, width, height);
 
-            // 繪製球體
-            balls.forEach(b => {
+            // 繪製所有物理球體 (包含彩球和白球)
+            const allBodies = [...ambientParticles, ...balls]; // 先畫小白球，再畫彩球(疊在上面)
+            
+            allBodies.forEach(b => {
                 ctx.beginPath();
                 ctx.arc(b.position.x, b.position.y, b.circleRadius, 0, Math.PI*2);
                 ctx.fillStyle = b.render.fillStyle;
                 ctx.fill();
-                
-                // 簡單的高光
-                ctx.fillStyle = 'rgba(255,255,255,0.2)';
-                ctx.beginPath();
-                ctx.arc(b.position.x - b.circleRadius*0.3, b.position.y - b.circleRadius*0.3, b.circleRadius*0.4, 0, Math.PI*2);
-                ctx.fill();
+
+                // 如果是彩球，加一點高光
+                if (b.label === 'ball') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                    ctx.beginPath();
+                    ctx.arc(b.position.x - b.circleRadius*0.3, b.position.y - b.circleRadius*0.3, b.circleRadius*0.35, 0, Math.PI*2);
+                    ctx.fill();
+                }
             });
 
-            // 繪製特效粒子
-            updateAndDrawParticles();
+            // 繪製碰撞特效
+            renderVFX(ctx);
 
             requestAnimationFrame(render);
         }
 
         // ==========================================
-        // 5. 感測器與 Shake 邏輯
+        // 5. 感測器與 Shake
         // ==========================================
         let lastAcc = {x:0, y:0, z:0};
         let shakeCooldown = false;
@@ -449,7 +461,9 @@
             
             // 慣性
             if(Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-                balls.forEach(b => {
+                const all = [...balls, ...ambientParticles];
+                all.forEach(b => {
+                    // 小白球質量小，會被推得更遠，產生層次感
                     Body.applyForce(b, b.position, {
                         x: -dx * 0.001 * b.mass,
                         y: -dy * 0.001 * b.mass
@@ -457,26 +471,28 @@
                 });
             }
 
-            // Shake 偵測
+            // Shake
             const totalDelta = Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
             if (!shakeCooldown && totalDelta > 15) {
                 shakeCooldown = true;
                 
-                // 視覺回饋
                 fxText.style.opacity = 1;
-                fxText.style.transform = `translate(-50%, -50%) scale(${1+Math.random()}) rotate(${Math.random()*20-10}deg)`;
+                fxText.style.transform = `translate(-50%, -50%) rotate(${Math.random()*20-10}deg)`;
                 setTimeout(() => fxText.style.opacity = 0, 300);
 
-                // 聽覺回饋
-                playShakeSound();
+                playSwooshSound();
 
-                // 物理炸裂
-                balls.forEach(b => {
+                // 炸裂
+                const all = [...balls, ...ambientParticles];
+                all.forEach(b => {
                     Body.applyForce(b, b.position, {
                         x: (Math.random()-0.5) * 0.2 * b.mass,
                         y: (Math.random()-0.5) * 0.2 * b.mass
                     });
                 });
+
+                // 觸覺
+                if(navigator.vibrate) navigator.vibrate(100);
 
                 setTimeout(() => shakeCooldown = false, 300);
             }
@@ -485,12 +501,14 @@
 
         function handleOrientation(e) {
             if(e.gamma == null) return;
+            const scale = config.gravity * 0.0005;
+            engine.gravity.scale = scale;
             engine.gravity.x = Math.min(Math.max(e.gamma/45, -1), 1);
             engine.gravity.y = Math.min(Math.max(e.beta/45, -1), 1);
         }
 
         // ==========================================
-        // 6. UI 互動
+        // 6. UI
         // ==========================================
         const inputs = {
             count: document.getElementById('input-count'),
@@ -510,11 +528,9 @@
             config.baseSize = parseInt(inputs.size.value);
             config.randomness = parseInt(inputs.random.value);
             config.gravity = parseFloat(inputs.gravity.value);
-
             values[k].innerText = inputs[k].value;
 
-            if(k === 'gravity') updateGravity();
-            else {
+            if(k !== 'gravity') {
                 clearTimeout(window.timer);
                 window.timer = setTimeout(rebuildBalls, 100);
             }
@@ -527,22 +543,18 @@
         });
 
         document.getElementById('start-btn').addEventListener('click', () => {
-            initAudio(); // 必須在 user gesture 中啟動
-            
+            initAudio(); 
             if(audioCtx.state === 'suspended') audioCtx.resume();
-
             document.getElementById('start-overlay').style.display = 'none';
             
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(r => { if(r==='granted') startSensors(); })
-                    .catch(e => startSensors());
+                DeviceOrientationEvent.requestPermission().then(r => { if(r==='granted') start(); }).catch(e => start());
             } else {
-                startSensors();
+                start();
             }
         });
 
-        function startSensors() {
+        function start() {
             window.addEventListener('deviceorientation', handleOrientation);
             window.addEventListener('devicemotion', handleMotion);
             window.addEventListener('resize', () => {
@@ -551,6 +563,7 @@
                 canvas.width = width;
                 canvas.height = height;
                 updateWalls();
+                updateWalls(); // 雙重確保
             });
             updateWalls();
             rebuildBalls();
