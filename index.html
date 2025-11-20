@@ -3,97 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D 互動流暢版</title>
+    <title>2.5D 水晶球池</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
-            touch-action: none; /* 禁止預設縮放 */
+            background-color: #050505;
+            touch-action: none;
             font-family: 'Segoe UI', sans-serif;
         }
 
         canvas { display: block; }
 
-        /* --- 控制面板 --- */
+        /* --- 控制面板 (半透明玻璃風) --- */
         #control-panel {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            background: rgba(10, 15, 30, 0.85);
+            background: rgba(20, 25, 40, 0.8);
             color: white;
-            padding: 10px 20px 20px 20px;
+            padding: 15px 20px;
             z-index: 100;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.15);
             transition: transform 0.3s ease;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         #control-panel.collapsed { transform: translateY(-100%); }
 
         #toggle-btn {
             position: fixed;
-            top: 10px;
-            right: 10px;
+            top: 15px;
+            right: 15px;
             z-index: 101;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255,255,255,0.2);
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
-            color: white;
+            color: #00ffff;
             font-size: 20px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(5px);
         }
 
         .control-group {
             display: flex;
             align-items: center;
-            margin-top: 12px;
+            margin-bottom: 12px;
         }
         
         .control-group label {
             width: 50px;
-            font-size: 13px;
+            font-size: 12px;
             color: #ccc;
-            font-weight: 500;
+            letter-spacing: 1px;
         }
         .control-group input {
             flex: 1;
             margin: 0 15px;
             cursor: pointer;
-            height: 6px;
-            background: #444;
-            border-radius: 3px;
+            height: 4px;
+            border-radius: 2px;
             appearance: none;
+            background: rgba(255,255,255,0.2);
         }
         .control-group input::-webkit-slider-thumb {
             appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            background: #00d2ff;
+            background: #00ffff;
+            box-shadow: 0 0 10px #00ffff;
         }
         .control-group span {
             width: 30px;
             text-align: right;
-            font-size: 13px;
-            color: #00d2ff;
+            font-size: 12px;
+            color: #00ffff;
+            font-family: monospace;
         }
 
-        /* 啟動頁面 */
+        /* 啟動畫面 */
         #start-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.92);
+            background: rgba(0,0,0,0.9);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -102,81 +105,82 @@
         }
         #start-btn {
             padding: 18px 50px;
-            font-size: 20px;
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
-            border: none;
+            font-size: 18px;
+            background: transparent;
+            border: 2px solid #00ffff;
+            color: #00ffff;
             border-radius: 50px;
-            color: white;
-            font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            transition: 0.2s;
         }
-        
+        #start-btn:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+        }
+
         #fx-text {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 60px;
+            font-size: 70px;
             font-weight: 900;
-            color: #fff;
+            color: white;
             opacity: 0;
             pointer-events: none;
             z-index: 50;
-            text-shadow: 0 0 20px cyan;
+            text-shadow: 0 0 30px cyan;
             transition: opacity 0.1s;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
 
     <div id="start-overlay">
-        <button id="start-btn">啟動 (START)</button>
-        <p style="color:#888; margin-top:20px; font-size:13px;">支援：搖晃、傾斜、手指滑動</p>
+        <button id="start-btn">Enter Crystal Box</button>
+        <p style="color:#666; margin-top:20px; font-size:12px;">Sound On • Physics Enabled</p>
     </div>
 
-    <div id="fx-text">SHAKE!</div>
+    <div id="fx-text">CRASH!</div>
     <button id="toggle-btn">⚙️</button>
 
     <div id="control-panel">
         <div class="control-group">
             <label>數量</label>
-            <input type="range" id="input-count" min="10" max="150" value="60" step="5">
-            <span id="val-count">60</span>
+            <input type="range" id="input-count" min="10" max="150" value="50" step="5">
+            <span id="val-count">50</span>
         </div>
         <div class="control-group">
             <label>大小</label>
-            <input type="range" id="input-size" min="0.5" max="2.0" value="1.1" step="0.1">
-            <span id="val-size">1.1</span>
+            <input type="range" id="input-size" min="15" max="50" value="30" step="1">
+            <span id="val-size">30</span>
         </div>
         <div class="control-group">
             <label>隨機</label>
-            <input type="range" id="input-random" min="0" max="100" value="50" step="10">
-            <span id="val-random">50</span>
+            <input type="range" id="input-random" min="0" max="100" value="40" step="5">
+            <span id="val-random">40</span>
         </div>
         <div class="control-group">
             <label>重力</label>
-            <input type="range" id="input-gravity" min="0" max="20" value="10" step="1">
-            <span id="val-gravity">10</span>
+            <input type="range" id="input-gravity" min="0" max="3" value="1" step="0.1">
+            <span id="val-gravity">1</span>
         </div>
     </div>
 
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-                "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
-            }
-        }
-    </script>
+    <canvas id="world"></canvas>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import * as CANNON from 'cannon-es';
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
-        // --- 音效 ---
+    <script>
+        // ==========================================
+        // 1. 水晶音效系統 (Crystal Synth)
+        // ==========================================
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
         let isAudioReady = false;
@@ -186,272 +190,268 @@
             isAudioReady = true;
         }
 
-        function playClink(intensity) {
+        function playCrystalSound(intensity) {
             if (!isAudioReady || intensity < 1.5) return;
+
             const t = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.connect(gain);
             gain.connect(audioCtx.destination);
-            osc.frequency.value = 1800 + Math.random() * 1200;
-            osc.type = 'sine';
-            const vol = Math.min(intensity * 0.05, 0.3);
-            gain.gain.setValueAtTime(vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-            osc.start(t);
-            osc.stop(t + 0.15);
+
+            // 音量控制
+            const vol = Math.min(intensity * 0.05, 0.5);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 1.5); // 長尾音
+
+            // 雙震盪器模擬金屬/玻璃諧波
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+
+            // 高頻清脆音
+            const baseFreq = 2000 + Math.random() * 1500; 
+            osc1.frequency.value = baseFreq;
+            osc2.frequency.value = baseFreq * 1.58; // 不和諧泛音產生金屬感
+
+            osc1.type = 'sine';
+            osc2.type = 'sine';
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+
+            osc1.start(t);
+            osc2.start(t);
+            osc1.stop(t + 1.5);
+            osc2.stop(t + 1.5);
         }
 
-        // --- Three.js ---
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        // ==========================================
+        // 2. Matter.js 物理引擎
+        // ==========================================
+        const Engine = Matter.Engine,
+              World = Matter.World,
+              Bodies = Matter.Bodies,
+              Body = Matter.Body,
+              Events = Matter.Events,
+              Composite = Matter.Composite;
 
-        const scene = new THREE.Scene();
+        const engine = Engine.create();
+        const world = engine.world;
         
-        const fov = 45;
-        const cameraZ = 25;
-        const camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 0, cameraZ);
+        // 預設向下重力，避免球懸空
+        engine.gravity.y = 1; 
+        engine.gravity.scale = 0.001;
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        dirLight.position.set(5, 10, 10);
-        scene.add(dirLight);
-
-        // --- 粒子特效 ---
-        const particles = [];
-        const particleGeo = new THREE.PlaneGeometry(0.2, 0.2);
-        const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
-
-        function spawnParticles(pos, count) {
-            for(let i=0; i<count; i++) {
-                const mesh = new THREE.Mesh(particleGeo, particleMat);
-                mesh.position.copy(pos);
-                mesh.userData.velocity = new THREE.Vector3((Math.random()-0.5)*8, (Math.random()-0.5)*8, (Math.random()-0.5)*5);
-                mesh.userData.life = 1.0;
-                mesh.rotation.z = Math.random() * Math.PI;
-                scene.add(mesh);
-                particles.push(mesh);
-            }
-        }
-
-        function updateParticles(dt) {
-            for(let i = particles.length-1; i>=0; i--) {
-                const p = particles[i];
-                p.position.addScaledVector(p.userData.velocity, dt);
-                p.userData.life -= dt * 3.0;
-                p.material.opacity = p.userData.life;
-                if(p.userData.life <= 0) {
-                    scene.remove(p);
-                    particles.splice(i, 1);
-                }
-            }
-        }
-
-        // --- Cannon-es 物理 ---
-        const world = new CANNON.World();
-        // 1. 關鍵修復：預設一個向下的重力，確保球不會浮在半空
-        world.gravity.set(0, -10, -2); 
-
-        const mat = new CANNON.Material();
-        // 2. 關鍵修復：摩擦力設為 0，防止球黏在牆壁上
-        const contactMat = new CANNON.ContactMaterial(mat, mat, { friction: 0.0, restitution: 0.7 });
-        world.addContactMaterial(contactMat);
+        const canvas = document.getElementById('world');
+        const ctx = canvas.getContext('2d');
+        
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
 
         let balls = [];
-        let ballMeshes = [];
-        let wallBodies = [];
+        let walls = [];
+        const colors = ['#00ffff', '#ff00ff', '#ffffff', '#0066ff', '#cc00cc'];
 
-        function getVisibleSize() {
-            const vFov = fov * Math.PI / 180;
-            const height = 2 * Math.tan(vFov / 2) * cameraZ;
-            const width = height * camera.aspect;
-            return { width, height };
+        let config = {
+            count: 50,
+            baseSize: 30,
+            randomness: 40,
+            gravity: 1
+        };
+
+        // --- 牆壁 ---
+        function createWalls() {
+            World.remove(world, walls);
+            walls = [];
+            const thick = 200;
+            const opts = { 
+                isStatic: true, 
+                render: { visible: false },
+                friction: 0, 
+                restitution: 0.8 
+            };
+            
+            walls.push(
+                Bodies.rectangle(width/2, -thick/2, width*2, thick, opts), // Top
+                Bodies.rectangle(width/2, height+thick/2, width*2, thick, opts), // Bottom
+                Bodies.rectangle(-thick/2, height/2, thick, height*2, opts), // Left
+                Bodies.rectangle(width+thick/2, height/2, thick, height*2, opts) // Right
+            );
+            World.add(world, walls);
         }
 
-        function updateWalls() {
-            wallBodies.forEach(b => world.removeBody(b));
-            wallBodies.length = 0;
-
-            const { width, height } = getVisibleSize();
-            const w = width / 2;
-            const h = height / 2;
-            const d = 2.5; // 3. 關鍵修復：加深盒子，讓球有空間錯開
-            const thick = 10;
-
-            const wallsData = [
-                { pos: [0, h + thick/2, 0], size: [w + thick, thick, d + thick] },
-                { pos: [0, -h - thick/2, 0], size: [w + thick, thick, d + thick] },
-                { pos: [-w - thick/2, 0, 0], size: [thick, h + thick, d + thick] },
-                { pos: [w + thick/2, 0, 0], size: [thick, h + thick, d + thick] },
-                { pos: [0, 0, -d/2 - thick/2], size: [w + thick, h + thick, thick] },
-                { pos: [0, 0, d/2 + thick/2], size: [w + thick, h + thick, thick] }, 
-            ];
-
-            wallsData.forEach(info => {
-                const shape = new CANNON.Box(new CANNON.Vec3(info.size[0], info.size[1], info.size[2]));
-                const body = new CANNON.Body({ mass: 0, material: mat });
-                body.addShape(shape);
-                body.position.set(...info.pos);
-                world.addBody(body);
-                wallBodies.push(body);
-            });
-        }
-
-        const ballColors = [0xff3366, 0x00ccff, 0xffcc00, 0xcc33ff, 0x00ff99];
-        const ballGeo = new THREE.SphereGeometry(1, 24, 24);
-        const ballThreeMat = new THREE.MeshStandardMaterial({ roughness: 0.2, metalness: 0.1 });
-
+        // --- 球體 ---
         function rebuildBalls() {
-            balls.forEach(b => world.removeBody(b));
-            ballMeshes.forEach(m => scene.remove(m));
+            World.remove(world, balls);
             balls = [];
-            ballMeshes = [];
 
-            const count = parseInt(document.getElementById('input-count').value);
-            const baseSize = parseFloat(document.getElementById('input-size').value);
-            const randPercent = parseInt(document.getElementById('input-random').value) / 100;
-            const { width, height } = getVisibleSize();
+            const randFactor = config.randomness / 100;
 
-            for(let i=0; i<count; i++) {
-                const r = baseSize * (1 + (Math.random()*2-1)*randPercent*0.5);
-                const safeR = Math.max(0.2, r);
+            for(let i = 0; i < config.count; i++) {
+                // 隨機大小
+                const scale = (1 - randFactor) + (Math.random() * 2 * randFactor);
+                let r = config.baseSize * scale;
+                r = Math.max(10, r);
 
-                const body = new CANNON.Body({ mass: 1, material: mat, linearDamping: 0.2 });
-                body.addShape(new CANNON.Sphere(safeR));
-                
-                // 4. 關鍵修復：生成位置盡量散開，不要全部疊在 (0,0)
-                body.position.set(
-                    (Math.random()-0.5) * width * 0.8,
-                    (Math.random()-0.5) * height * 0.8,
-                    (Math.random()-0.5) * 2
-                );
+                // 隨機位置 (分散)
+                const x = Math.random() * (width - 100) + 50;
+                const y = Math.random() * (height * 0.5) + 50;
 
-                body.addEventListener('collide', (e) => {
-                    const v = Math.abs(e.contact.getImpactVelocityAlongNormal());
-                    if(v > 2) {
-                        playClink(v);
-                        if(v > 5) spawnParticles(new THREE.Vector3(body.position.x, body.position.y, body.position.z), 3);
+                const ball = Bodies.circle(x, y, r, {
+                    restitution: 0.8, // 很彈
+                    friction: 0.001,  // 很滑
+                    frictionAir: 0.002,
+                    density: 0.002,
+                    render: {
+                        // 我們會自己畫，這裡存顏色就好
+                        fillStyle: colors[Math.floor(Math.random() * colors.length)]
                     }
                 });
-
-                world.addBody(body);
-                balls.push(body);
-
-                const mesh = new THREE.Mesh(ballGeo, ballThreeMat.clone());
-                mesh.material.color.setHex(ballColors[Math.floor(Math.random() * ballColors.length)]);
-                mesh.scale.set(safeR, safeR, safeR);
-                scene.add(mesh);
-                ballMeshes.push(mesh);
+                balls.push(ball);
             }
+            World.add(world, balls);
         }
 
-        // --- 感測器與互動 ---
-        const gravitySlider = document.getElementById('input-gravity');
+        // 碰撞監聽
+        Events.on(engine, 'collisionStart', (e) => {
+            e.pairs.forEach(pair => {
+                const speed = pair.bodyA.speed + pair.bodyB.speed;
+                if(speed > 2) playCrystalSound(speed);
+            });
+        });
+
+        // ==========================================
+        // 3. 2.5D 渲染器 (模擬深度)
+        // ==========================================
+        function render() {
+            Engine.update(engine, 1000 / 60);
+            ctx.clearRect(0, 0, width, height);
+
+            // --- A. 畫背景透視 (模擬玻璃箱) ---
+            // 用漸層和線條創造深度感
+            const gradient = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#000000');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            // 畫一個深處的網格
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // 放射線
+            for(let i=0; i<8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX + Math.cos(angle)*width, centerY + Math.sin(angle)*width);
+                ctx.stroke();
+            }
+
+            // --- B. 畫球球 (模擬 3D 玻璃質感) ---
+            balls.forEach(b => {
+                const x = b.position.x;
+                const y = b.position.y;
+                const r = b.circleRadius;
+
+                // 1. 主體 (帶有漸層)
+                const grad = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
+                // 核心顏色 (亮) -> 邊緣顏色 (暗)
+                grad.addColorStop(0, adjustColor(b.render.fillStyle, 100)); // 亮部
+                grad.addColorStop(0.5, b.render.fillStyle); // 原色
+                grad.addColorStop(1, adjustColor(b.render.fillStyle, -80)); // 暗部 (陰影)
+                
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI*2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // 2. 高光 (Specular Highlight) - 讓它看起來像玻璃
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                // 在左上角畫一個橢圓高光
+                ctx.ellipse(x - r*0.3, y - r*0.3, r*0.25, r*0.15, Math.PI/4, 0, Math.PI*2);
+                ctx.fill();
+
+                // 3. 反光 (Rim Light) - 邊緣的微光
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.stroke();
+            });
+
+            requestAnimationFrame(render);
+        }
+
+        // 輔助：調整顏色亮度
+        function adjustColor(color, amount) {
+            return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+        }
+
+        // ==========================================
+        // 4. 感測器邏輯
+        // ==========================================
         let lastAcc = {x:0, y:0, z:0};
         let shakeCooldown = false;
         const fxText = document.getElementById('fx-text');
 
         function handleOrientation(e) {
-            // 5. 關鍵修復：過濾無效數據
-            if (e.gamma === null || e.beta === null) return;
-
-            const gVal = parseFloat(gravitySlider.value);
-            const radX = e.gamma * Math.PI / 180;
-            const radY = e.beta * Math.PI / 180;
+            if (e.gamma === null) return;
             
-            // 只有在數據有效時才更新重力
-            world.gravity.set(
-                Math.sin(radX) * gVal,
-                Math.sin(radY) * -gVal,
-                -2 // 保持一點向後的重力，讓球貼著背板
-            );
+            // 根據重力滑桿調整力度
+            const scale = config.gravity * 0.001; 
+            engine.gravity.scale = scale;
+
+            const x = Math.min(Math.max(e.gamma / 45, -1), 1);
+            const y = Math.min(Math.max(e.beta / 45, -1), 1);
+            engine.gravity.x = x;
+            engine.gravity.y = y;
         }
 
         function handleMotion(e) {
             const acc = e.accelerationIncludingGravity || e.acceleration;
             if(!acc) return;
+            
             const dx = acc.x - lastAcc.x;
             const dy = acc.y - lastAcc.y;
-            const dz = acc.z - lastAcc.z;
-            const total = Math.abs(dx)+Math.abs(dy)+Math.abs(dz);
+            const total = Math.abs(dx) + Math.abs(dy);
 
-            if(!shakeCooldown && total > 20) {
-                shakeCooldown = true;
-                fxText.style.opacity = 1;
-                setTimeout(()=>fxText.style.opacity=0, 300);
-                setTimeout(()=>shakeCooldown=false, 300);
-                if(navigator.vibrate) navigator.vibrate(100);
+            // 慣性推力
+            if(total > 1) {
                 balls.forEach(b => {
-                    b.applyImpulse(new CANNON.Vec3((Math.random()-0.5)*8, (Math.random()-0.5)*8, (Math.random()-0.5)*5), b.position);
+                    Body.applyForce(b, b.position, {
+                        x: -dx * 0.0005 * b.mass,
+                        y: -dy * 0.0005 * b.mass
+                    });
                 });
             }
-            lastAcc = {x:acc.x, y:acc.y, z:acc.z};
-        }
 
-        // 6. 新增功能：滑鼠/觸控推球 (在沒有陀螺儀時也能玩)
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        
-        function onTouchMove(event) {
-            event.preventDefault(); // 防止滾動
-            
-            // 取得觸控點 (只取第一個手指)
-            let cx, cy;
-            if (event.changedTouches) {
-                cx = event.changedTouches[0].clientX;
-                cy = event.changedTouches[0].clientY;
-            } else {
-                cx = event.clientX;
-                cy = event.clientY;
-            }
-
-            // 轉換為 Normalized Device Coordinates (-1 to +1)
-            mouse.x = (cx / window.innerWidth) * 2 - 1;
-            mouse.y = -(cy / window.innerHeight) * 2 + 1;
-
-            // 在 3D 空間中產生一個「推力場」
-            // 這裡我們簡化：直接對所有球施加一個遠離滑鼠點的力
-            // 先算出滑鼠在 Z=0 平面的世界座標
-            raycaster.setFromCamera(mouse, camera);
-            const targetZ = 0;
-            const vec = new THREE.Vector3();
-            raycaster.ray.at(cameraZ - targetZ, vec); // 粗略估計
-
-            balls.forEach(b => {
-                const dx = b.position.x - vec.x;
-                const dy = b.position.y - vec.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
+            // 搖晃
+            if(!shakeCooldown && total > 25) {
+                shakeCooldown = true;
+                fxText.style.opacity = 1;
+                fxText.innerText = ["CRASH!", "BANG!", "BOOM!"][Math.floor(Math.random()*3)];
+                setTimeout(()=>fxText.style.opacity=0, 300);
+                setTimeout(()=>shakeCooldown=false, 300);
                 
-                // 如果球在手指附近 (半徑 5 單位內)
-                if (dist < 5) {
-                    const force = (5 - dist) * 2; // 越近力越大
-                    b.applyForce(new CANNON.Vec3(dx * force, dy * force, 0), b.position);
-                }
-            });
-        }
-        
-        window.addEventListener('mousemove', onTouchMove);
-        window.addEventListener('touchmove', onTouchMove, { passive: false });
-
-
-        // --- Loop & Init ---
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const dt = Math.min(clock.getDelta(), 0.1);
-            world.step(1/60, dt, 3);
-            
-            for(let i=0; i<balls.length; i++) {
-                ballMeshes[i].position.copy(balls[i].position);
-                ballMeshes[i].quaternion.copy(balls[i].quaternion);
+                if(navigator.vibrate) navigator.vibrate(150);
+                
+                // 炸裂
+                balls.forEach(b => {
+                    Body.applyForce(b, b.position, {
+                        x: (Math.random()-0.5) * 0.2 * b.mass,
+                        y: (Math.random()-0.5) * 0.2 * b.mass
+                    });
+                });
             }
-            updateParticles(dt);
-            renderer.render(scene, camera);
+            lastAcc = {x:acc.x, y:acc.y};
         }
 
-        // UI update...
+        // ==========================================
+        // 5. UI 互動
+        // ==========================================
         const inputs = {
             count: document.getElementById('input-count'),
             size: document.getElementById('input-size'),
@@ -464,34 +464,47 @@
             random: document.getElementById('val-random'),
             gravity: document.getElementById('val-gravity')
         };
-        function uiUpdate(k) {
-            spans[k].innerText = inputs[k].value;
-            if(k!=='gravity') { clearTimeout(window.t); window.t=setTimeout(rebuildBalls, 100); }
-        }
-        Object.keys(inputs).forEach(k=>inputs[k].addEventListener('input',()=>uiUpdate(k)));
-        document.getElementById('toggle-btn').onclick=()=>document.getElementById('control-panel').classList.toggle('collapsed');
 
+        function updateUI(k) {
+            spans[k].innerText = inputs[k].value;
+            config.count = parseInt(inputs.count.value);
+            config.baseSize = parseInt(inputs.size.value);
+            config.randomness = parseInt(inputs.random.value);
+            config.gravity = parseFloat(inputs.gravity.value);
+
+            if(k !== 'gravity') {
+                clearTimeout(window.t);
+                window.t = setTimeout(rebuildBalls, 100);
+            }
+        }
+
+        Object.keys(inputs).forEach(k => inputs[k].addEventListener('input', () => updateUI(k)));
+        document.getElementById('toggle-btn').onclick = () => document.getElementById('control-panel').classList.toggle('collapsed');
+
+        // --- 啟動 ---
         function start() {
             document.getElementById('start-overlay').style.display = 'none';
             window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth/window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                updateWalls();
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+                createWalls();
+                rebuildBalls();
             });
             window.addEventListener('deviceorientation', handleOrientation);
             window.addEventListener('devicemotion', handleMotion);
             
-            updateWalls(); // 立即執行一次確保牆壁正確
+            createWalls();
             rebuildBalls();
-            animate();
+            render();
         }
 
         document.getElementById('start-btn').onclick = () => {
             initAudio();
             if(audioCtx.state === 'suspended') audioCtx.resume();
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(r => { if(r==='granted') start(); }).catch(()=>start());
+                DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')start()}).catch(()=>start());
             } else {
                 start();
             }
